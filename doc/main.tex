@@ -1,0 +1,97 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8x]{inputenc}
+\usepackage{hyperref}
+
+%opening
+\title{}
+\author{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+BRISK and ORB hand in hand will conquer the world
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Similar works}
+
+BRISK on GPU
+\url{http://researchspace.csir.co.za/dspace/bitstream/10204/5387/1/Cronje_2011.pdf}
+
+\section{Vincent's ideas}
+
+\subsection{Features}
+
+We should compare features:
+\begin{itemize}
+ \item AGAST
+ \item BRISK
+ \item FAST
+ \item FAST + Harris (ORB)
+ \item FAST-ER 
+\end{itemize}
+
+Once we find the best one(s) of those, we compare to the other traditional ones
+(Harris, Tomasi Kanade ...)
+
+\subsection{Descriptors}
+
+We should compare descriptors:
+\begin{itemize}
+ \item BRISK
+ \item ORB
+ \item combination of both (the circles of BRISK, the learning of ORB (that is
+necessary to scale up in our experiments))
+ \item different lengths of signatures
+\end{itemize}
+
+Once we find the best one(s) of those, we compare to the other traditional ones
+(SIFT, ...)
+
+\subsection{Tests}
+
+\begin{itemize}
+ \item Mikolajczyk's tests (this will test quality/repeatability)
+ \item PASCAL for object retrieval (this will test the scalability)
+\end{itemize}
+
+
+\subsection{The ultimate combo}
+
+That is just my opinion and I have nothing but my instinct to back it up :) :
+AGAST + Harris, BRISK circles, 256 bits chosen according to a method like done in ORB.
+
+\section{Stefan and Margarita's Ideas considering the discussion with Kurt and Gary}
+The goal should be to perform a complete evaluation of existing algorithms and use this to synthesize the qualitatively best / fastest feature (probably mostly based on BRISK and ORB).
+\subsection{Description of the Evaluation Framework}
+\begin{itemize}
+\item To our opinion, the state-of-the art evaluation scheme based on Mikolajczyk's work has some shortcomings that we should address. We could provide some extensions, which could be an important contribution. For instance, the dataset uses ground-truth homographies, which are just not accurate enough, if you use a precise (in image coordinates) detector like FAST at the lowest level of the image pyramid. Essentially, the "ground-truth" correspondences will be wrong, which biases the whole evaluation. I (Stefan) have set up an evaluation toolchain using the precise ground truth dataset by Christoph Strecha (\url{http://cvlab.epfl.ch/~strecha/multiview/denseMVS.html}), that could in principle be used. Also, I think we could propose some extensions to the current repeatability score.
+\item The paper will focus on open-source (OpenCV) features, nevertheless we think it should be as complete as possible. So it would be beneficial to also incorporate results using closed source SIFT and SURF at least, since they give different results (to some extent) than the open-source versions. Probably it will even make sense to evaluate GPU-SURF. What are your thoughts here? 
+\end{itemize}
+
+\subsection{Detection Repeatability}
+ We suggest to clearly separate detector evaluation: we should have the repeatability score on the one hand, but maybe also gather some statistical parameters of the inliers (standard deviation of re-detection position and scale) that let's us design the target tolerance of the extracted descriptors.
+\begin{itemize}
+\item Single-scale detectors: AGAST/FAST, Harris, ORB, single-scale BRISK, ...
+\item Scale-space detectors: SIFT, SURF, BRISK, ...
+\end{itemize}
+In terms of timings, we can give also the ones for ORB on Android...
+
+\subsection{Quality of the Orientation Estimation}
+The correct estimation of the orientation is crucial for good performance in the descriptor similarity. We could identify some statistical parameters of the orientation estimates. This will let us compare the different approaches from BRISK and ORB and synthesize the 'best' one. Furthermore, this will let us define a requirement for orientation tolerance of the descriptor. For the case of BRISK, this is in the order of the angular discretization of the one circle in the sampling pattern that contains the most sampling points.
+
+\subsection{Descriptor Similarity: Precision/Recall}
+We think we should have an evaluation of different descriptors based on the same detected regions (as far as compatible) in order to separate strictly detection (and its potential imprecision) from descriptor quality. Yet, the joint processes should be analyzed as well, since this is what will be used by the community. Maybe even some interesting combinations can come out here that we are not thinking about yet.
+
+Here we could include some parameter studies as suggested by Gary and Kurt. We have different approaches to defining the sampled pairs or for descriptor compression. Another one would be to vary the size of the patches where the descriptors are extracted from.
+
+\subsection{Matching}
+Probably, Willow Garage has more material here. We just used a stupid brute-force matcher so far. How far do we want to go? Should we include any geometric verification? Maybe we could also evaluate the accuracy of a whole 3D-reconstruction / camera pose with respect to ground-truth (3D world / 6D camera transformation), if available (with timings). This would provide a very complete insight into what's best to use e.g. for some re-localization given the computational resources.
+
+\subsection{Discussion}
+This will be a very important part of the article, heavily dependent on what figures/responses we get from the evaluation. With respect to existing methods, we expect that this discussion will favour BRISK and ORB (although we should not sound biased) or if a new feature-algorithm arises in the end, then hopefully this performs mostly better than the rest.
+
+\end{document}
