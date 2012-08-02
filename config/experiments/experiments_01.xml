@@ -1,0 +1,23 @@
+<experimentConfig>
+  <imageClasses>bikes</imageClasses>
+  <otherImages>4</otherImages>
+
+  <detector>
+    <method>FAST</method>
+    <maxKeyPoints>100</maxKeyPoints>
+  </detector>
+
+  <descriptor>
+    <method>Sort</method>
+    <normalizeRotation>false</normalizeRotation>
+    <normalizeScale>false</normalizeScale>
+    <patchWidth>8</patchWidth>
+    <blurWidth>5</blurWidth>
+    <color>false</color>
+  </descriptor>
+
+  <matcher>
+    <method>KendallTau</method>
+  </matcher>
+</experimentConfig>
+

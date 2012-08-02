@@ -1,0 +1,6 @@
+<runtimeConfig>
+  <!-- Paths are relative to user's home directory. -->
+  <projectRoot>week6/LUCID</projectRoot>
+  <deleteTemporaryFiles>false</deleteTemporaryFiles>
+  <skipCompletedExperiments>false</skipCompletedExperiments>
+</runtimeConfig>

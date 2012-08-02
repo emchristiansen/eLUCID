@@ -1,0 +1,6 @@
+// Paths are relative to user's home directory.
+projectRoot: 	      	 	Dropbox/Spring2012/lucidPipeline
+
+deleteTemporaryFiles: 		false
+
+skipCompletedExperiments: 	true

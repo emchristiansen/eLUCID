@@ -1,0 +1,27 @@
+<experimentConfig>
+
+imageClass:			bikes
+
+otherImage:			4			
+
+////////////////////////////////////////////////////////////////////////////////
+
+detector:			FAST
+detectorMaxKeyPoints:		100
+
+////////////////////////////////////////////////////////////////////////////////
+
+descriptor:			LUCID
+
+descriptorBlurWidth:		5
+descriptorNormalizeScale:	false
+descriptorNormalizeRotation:	false
+
+// patchSize
+descriptorLUCIDArg0:		48
+// grayscale
+descriptorLUCIDArg1:		true
+
+////////////////////////////////////////////////////////////////////////////////
+
+matcher:			Kendalltau
