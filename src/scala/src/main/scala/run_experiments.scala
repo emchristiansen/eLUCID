@@ -12,17 +12,32 @@ import nebula._
 
 object RunExperiments extends OptParse {
   def mkTable {
-    val experiment = CorrespondenceExperiment(
+    val baseExperiment = CorrespondenceExperiment(
       "",
       0,
       FASTDetector(100),
-      SortExtractor(false, false, 8, 5, false),
+      SortExtractor(false, false, 16, 5, true),
       L0Matcher())
 
-    val rowMutations: Seq[CorrespondenceExperiment => CorrespondenceExperiment] = 
-      Seq(
-	e => e.copy(otherImage = 4)
-    )
+    val rowMutations: Seq[CorrespondenceExperiment => CorrespondenceExperiment] = {
+      for (
+	imageClass <- Seq("graffiti", "trees", "jpeg", "boat", "bark", "bikes", "light", "wall");
+	otherImage <- Seq(2, 4, 6)
+      ) yield { e: CorrespondenceExperiment => e.copy(imageClass = imageClass, otherImage = otherImage) }
+    }
+
+    val columnMutations: Seq[CorrespondenceExperiment => CorrespondenceExperiment] = {
+      val matchers = Seq(
+	L0Matcher(),
+	L1Matcher(),
+	L2Matcher(),
+	KendallTauMatcher(),
+	CayleyMatcher())
+      for (matcher <- matchers) yield { e: CorrespondenceExperiment => e.copy(matcher = matcher) }
+    }
+
+    val table = Summary.resultsTable(baseExperiment, rowMutations, columnMutations)
+    println(table)
   }
 
   def runExperiment(experiment: CorrespondenceExperiment) { 
@@ -35,7 +50,6 @@ object RunExperiments extends OptParse {
     }
 
     val results = CorrespondenceExperimentResults.runExperiment(experiment)
-    results.save
 
     println("Recognition rate was %s".format(Summary.recognitionRate(results.dmatches)))
   }
@@ -75,5 +89,7 @@ object RunExperiments extends OptParse {
     experiments.foreach(runExperiment)
 
     println("All experiments completed.")
+
+    mkTable
   }
 }

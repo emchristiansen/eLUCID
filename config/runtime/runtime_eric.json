@@ -4,6 +4,6 @@
     "parallel": true
     "tempDirectory": "/tmp/correspondence"
     "deleteTemporaryFiles": false
-    "skipCompletedExperiments": false
+    "skipCompletedExperiments": true
     "maxSimultaneousExperiments": 1
 }
