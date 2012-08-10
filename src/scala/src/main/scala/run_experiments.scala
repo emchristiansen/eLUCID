@@ -11,7 +11,22 @@ import com.frugalmechanic.optparse._
 import nebula._
 
 object RunExperiments extends OptParse {
+  def mkTable {
+    val experiment = CorrespondenceExperiment(
+      "",
+      0,
+      FASTDetector(100),
+      SortExtractor(false, false, 8, 5, false),
+      L0Matcher())
+
+    val rowMutations: Seq[CorrespondenceExperiment => CorrespondenceExperiment] = 
+      Seq(
+	e => e.copy(otherImage = 4)
+    )
+  }
+
   def runExperiment(experiment: CorrespondenceExperiment) { 
+    // TODO: Sort out the |skipCompletedExperiments| logic.
     if (Global.run[RuntimeConfig].skipCompletedExperiments && experiment.alreadyRun) { 
       println("Already run, skipping: %s".format(experiment))
       return
@@ -19,33 +34,7 @@ object RunExperiments extends OptParse {
       println("Running experiment: %s".format(experiment))
     }
 
-    println(experiment.leftImageFile)
-
-    val leftImage = experiment.leftImage
-    val rightImage = experiment.rightImage
-
-    val (leftKeyPoints, rightKeyPoints) = {
-      val leftKeyPoints = experiment.detector(leftImage)
-      Util.pruneKeyPoints(leftImage, 
-  			  rightImage, 
-  			  experiment.homography, 
-  			  leftKeyPoints).unzip
-    }
-
-    println("Number of KeyPoints: %s".format(leftKeyPoints.size))
-
-    val (leftDescriptors, rightDescriptors) = {
-      val leftDescriptors = experiment.extractor(leftImage, leftKeyPoints)
-      val rightDescriptors = experiment.extractor(rightImage, rightKeyPoints)
-
-      for ((Some(left), Some(right)) <- leftDescriptors.zip(rightDescriptors)) yield (left, right)
-    } unzip
-
-    println("Number of surviving KeyPoints: %s".format(leftDescriptors.size))
-
-    val dmatches = experiment.matcher(true, leftDescriptors, rightDescriptors)
-
-    val results = CorrespondenceExperimentResults(experiment, dmatches)
+    val results = CorrespondenceExperimentResults.runExperiment(experiment)
     results.save
 
     println("Recognition rate was %s".format(Summary.recognitionRate(results.dmatches)))

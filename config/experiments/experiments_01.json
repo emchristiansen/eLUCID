@@ -6,7 +6,7 @@
     "detectors": [
 	{
 	    "jsonClass": "FASTDetector"
-	    "maxKeyPoints": 500
+	    "maxKeyPoints": 100
 	}
     ]
 
@@ -15,9 +15,9 @@
 	    "jsonClass": "SortExtractor"
 	    "normalizeRotation": false
 	    "normalizeScale": false
-	    "patchWidth": 16
+	    "patchWidth": 8
 	    "blurWidth": 5
-	    "color": false
+	    "color": true
 	}
     ]
 
