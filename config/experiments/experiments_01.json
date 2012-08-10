@@ -1,0 +1,29 @@
+{
+    "jsonClass": "CorrespondenceExperimentConfig"
+    "imageClasses": ["bikes"]
+    "otherImages": [2]
+    
+    "detectors": [
+	{
+	    "jsonClass": "FASTDetector"
+	    "maxKeyPoints": 500
+	}
+    ]
+
+    "extractors": [
+	{
+	    "jsonClass": "SortExtractor"
+	    "normalizeRotation": false
+	    "normalizeScale": false
+	    "patchWidth": 16
+	    "blurWidth": 5
+	    "color": false
+	}
+    ]
+
+    "matchers": [
+	{
+	    "jsonClass": "L0Matcher"
+	}
+    ]
+}
