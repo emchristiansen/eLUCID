@@ -8,36 +8,17 @@ import util.Random
 
 import com.frugalmechanic.optparse._
 
+import com.twitter.util._
+
 import nebula._
 
 object RunExperiments extends OptParse {
-  def mkTable {
-    val baseExperiment = CorrespondenceExperiment(
-      "",
-      0,
-      FASTDetector(100),
-      SortExtractor(false, false, 16, 5, true),
-      L0Matcher())
+  def mkTable(experiments: Seq[Seq[CorrespondenceExperiment]]) {
+    val table = Table(experiments)
 
-    val rowMutations: Seq[CorrespondenceExperiment => CorrespondenceExperiment] = {
-      for (
-	imageClass <- Seq("graffiti", "trees", "jpeg", "boat", "bark", "bikes", "light", "wall");
-	otherImage <- Seq(2, 4, 6)
-      ) yield { e: CorrespondenceExperiment => e.copy(imageClass = imageClass, otherImage = otherImage) }
-    }
-
-    val columnMutations: Seq[CorrespondenceExperiment => CorrespondenceExperiment] = {
-      val matchers = Seq(
-	L0Matcher(),
-	L1Matcher(),
-	L2Matcher(),
-	KendallTauMatcher(),
-	CayleyMatcher())
-      for (matcher <- matchers) yield { e: CorrespondenceExperiment => e.copy(matcher = matcher) }
-    }
-
-    val table = Summary.resultsTable(baseExperiment, rowMutations, columnMutations)
-    println(table)
+    println("Table title is %s".format(table.title))
+    println("Writing table to %s".format(table.path))
+    org.apache.commons.io.FileUtils.writeStringToFile(table.path, table.toTSV)
   }
 
   def runExperiment(experiment: CorrespondenceExperiment) { 
@@ -54,42 +35,51 @@ object RunExperiments extends OptParse {
     println("Recognition rate was %s".format(Summary.recognitionRate(results.dmatches)))
   }
 
+  def interpretFile[A](file: File): A = {
+    val source = org.apache.commons.io.FileUtils.readFileToString(file)
+    (new Eval).apply[A](source)
+  }
+
+  def init(runtimeConfigFile: File) {
+    val runtimeConfig = interpretFile[RuntimeConfig](runtimeConfigFile)
+    Global.runVar = Some(runtimeConfig)
+    println(runtimeConfig)
+  }
+
   val runtimeConfigFile = StrOpt()
   val experimentConfigFilesOrDirectory = MultiStrOpt()
+  val tableConfigFiles = MultiStrOpt()
 
   def main(args: Array[String]) { 
     parse(args)
 
-    val runtimeConfig = IO.fromJSONFile[RuntimeConfig](new File(runtimeConfigFile.get))
-    Global.runVar = Some(runtimeConfig)
+    init(new File(runtimeConfigFile.get))
 
-    println(runtimeConfig)
-
-    val experimentConfigFiles: List[File] = {
-      val paths = experimentConfigFilesOrDirectory.get
-      val files = paths.map(path => new File(path)).toList
-      files match {
-    	case List(file) => if (file.isDirectory) file.listFiles.toList
-    			   else files
-    	case _ => files
+    if (experimentConfigFilesOrDirectory.isDefined) {
+      val experimentConfigFiles: Seq[File] = {
+	val paths = experimentConfigFilesOrDirectory.get
+	val files = paths.map(path => new File(path)).toSeq
+	files match {
+    	  case Seq(file) => if (file.isDirectory) file.listFiles.toList
+    			    else files
+    	  case _ => files
+	}
       }
+
+      val experiments = experimentConfigFiles.flatMap(interpretFile[Seq[CorrespondenceExperiment]])
+
+      println("There are %s experiments:".format(experiments.size))
+      experiments.foreach(println)
+
+      Util.parallelize(experiments).foreach(runExperiment)
+
+      println("All experiments completed.")
     }
 
-    val file = Global.homeDirectory + "/" + Global.run[RuntimeConfig].projectRoot + "/config/experiments/debug.json"
-
-    if (experimentConfigFiles.size == 0) println("No experiments specified.")
-
-    val experimentConfigs = experimentConfigFiles.map(CorrespondenceExperimentConfig.fromJSONFile)
-
-    val experiments = experimentConfigs.flatMap(CorrespondenceExperiment.fromConfig)
-
-    println("There are %s experiments:".format(experiments.size))
-    experiments.foreach(println)
-
-    experiments.foreach(runExperiment)
-
-    println("All experiments completed.")
-
-    mkTable
+    if (tableConfigFiles.isDefined) {
+      val files = tableConfigFiles.get.map(name => new File(name))
+      val tables = files.map(interpretFile[Seq[Seq[CorrespondenceExperiment]]])
+      tables.foreach(mkTable)
+    }
   }
 }
