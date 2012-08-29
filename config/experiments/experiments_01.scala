@@ -1,13 +1,18 @@
 import nebula._
 
-val detector = FASTDetector(maxKeyPoints = 102)
+val detector = FASTDetector(maxKeyPoints = 50)
 
 val extractor = SortExtractor(
   normalizeRotation = false,
   normalizeScale = false,
   patchWidth = 8,
   blurWidth = 5,
-  color = false)
+  color = true
+)
+
+// val extractor = BRISKExtractor(
+//   normalizeRotation = false,
+//   normalizeScale = false)
 
 val matcher = L0Matcher()
 

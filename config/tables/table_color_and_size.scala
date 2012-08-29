@@ -17,8 +17,8 @@ val detectors = Seq(
 )
 
 val extractors = for (
-  patchWidth <- Seq(8, 4, 2, 1);
-  color <- Seq(true, false)
+  patchWidth <- Seq(8, 4, 2);
+  color <- Seq("Gray", "sRGB")
 ) yield SortExtractor(
   normalizeRotation = false,
   normalizeScale = false,
@@ -36,12 +36,12 @@ val matchers = Seq(
   CayleyMatcher())
 
 for (
-  imageClass <- imageClasses;
-  otherImage <- otherImages
-) yield for (
   detector <- detectors;
   extractor <- extractors;
   matcher <- matchers
+) yield for (
+  imageClass <- imageClasses;
+  otherImage <- otherImages
 ) yield CorrespondenceExperiment(
   imageClass, 
   otherImage,

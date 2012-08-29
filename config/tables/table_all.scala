@@ -21,14 +21,14 @@ val rawExtractor = RawExtractor(
   normalizeScale = false,
   patchWidth = 16,
   blurWidth = 5,
-  color = true)  
+  color = "sRGB")  
 
 val sortExtractor = SortExtractor(
   normalizeRotation = false,
   normalizeScale = false,
   patchWidth = 16,
   blurWidth = 5,
-  color = true)
+  color = "sRGB")
 
 val l0Matcher = L0Matcher()
 val l1Matcher = L1Matcher()
@@ -48,11 +48,11 @@ val extractorsAndMatchers = Seq(
   (sortExtractor, cayleyMatcher))
 
 for (
-  imageClass <- imageClasses;
-  otherImage <- otherImages
-) yield for (
   detector <- detectors;
   (extractor, matcher) <- extractorsAndMatchers
+) yield for (
+  imageClass <- imageClasses;
+  otherImage <- otherImages
 ) yield CorrespondenceExperiment(
   imageClass, 
   otherImage,

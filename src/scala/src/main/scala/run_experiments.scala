@@ -14,14 +14,31 @@ import nebula._
 
 object RunExperiments extends OptParse {
   def mkTable(experiments: Seq[Seq[CorrespondenceExperiment]]) {
-    val table = Table(experiments)
+//    experiments.flatten.par.map(runExperiment)
+//    experiments.flatten.map(runExperiment)
+    Util.parallelize(experiments.flatten).foreach(runExperiment)
+
+    val table = TableUnrendered(experiments)
 
     println("Table title is %s".format(table.title))
     println("Writing table to %s".format(table.path))
-    org.apache.commons.io.FileUtils.writeStringToFile(table.path, table.toTSV)
+    val tsv = table.toTSV(x => TableUnrendered.recognitionRate(x).formatted("%.2f"))
+//    println(tsv)
+    org.apache.commons.io.FileUtils.writeStringToFile(table.path, tsv)
   }
 
-  def runExperiment(experiment: CorrespondenceExperiment) { 
+  def mkBag(experiments: Seq[Seq[CorrespondenceExperiment]]) {
+    def mkHistogram(rowLabel: String, columnLabel: String, experiment: CorrespondenceExperiment): Histogram = {
+      val title = rowLabel + "__" + columnLabel
+      Histogram(experiment, title)
+    }
+
+    val bag = TableUnrendered(experiments).toBag(mkHistogram)
+
+    bag.foreach(_.draw)
+  }
+
+  def runExperiment(experiment: CorrespondenceExperiment) {
     // TODO: Sort out the |skipCompletedExperiments| logic.
     if (Global.run[RuntimeConfig].skipCompletedExperiments && experiment.alreadyRun) { 
       println("Already run, skipping: %s".format(experiment))
@@ -35,25 +52,15 @@ object RunExperiments extends OptParse {
     println("Recognition rate was %s".format(Summary.recognitionRate(results.dmatches)))
   }
 
-  def interpretFile[A](file: File): A = {
-    val source = org.apache.commons.io.FileUtils.readFileToString(file)
-    (new Eval).apply[A](source)
-  }
-
-  def init(runtimeConfigFile: File) {
-    val runtimeConfig = interpretFile[RuntimeConfig](runtimeConfigFile)
-    Global.runVar = Some(runtimeConfig)
-    println(runtimeConfig)
-  }
-
   val runtimeConfigFile = StrOpt()
   val experimentConfigFilesOrDirectory = MultiStrOpt()
   val tableConfigFiles = MultiStrOpt()
+  val bagConfigFiles = MultiStrOpt()
 
   def main(args: Array[String]) { 
     parse(args)
 
-    init(new File(runtimeConfigFile.get))
+    RuntimeConfig.init(new File(runtimeConfigFile.get))
 
     if (experimentConfigFilesOrDirectory.isDefined) {
       val experimentConfigFiles: Seq[File] = {
@@ -66,7 +73,17 @@ object RunExperiments extends OptParse {
 	}
       }
 
-      val experiments = experimentConfigFiles.flatMap(interpretFile[Seq[CorrespondenceExperiment]])
+      def loadExperiments(file: File): Seq[CorrespondenceExperiment] = {
+	// Guess the data format by the filename.
+	val oneDimensional = file.getName.contains("experiment")
+	val twoDimensional = file.getName.contains("table")
+	require(oneDimensional ^ twoDimensional)
+
+	if (oneDimensional) IO.interpretFile[Seq[CorrespondenceExperiment]](file)
+	else IO.interpretFile[Seq[Seq[CorrespondenceExperiment]]](file).flatten
+      }
+
+      val experiments: Seq[CorrespondenceExperiment] = experimentConfigFiles.flatMap(loadExperiments)
 
       println("There are %s experiments:".format(experiments.size))
       experiments.foreach(println)
@@ -78,8 +95,14 @@ object RunExperiments extends OptParse {
 
     if (tableConfigFiles.isDefined) {
       val files = tableConfigFiles.get.map(name => new File(name))
-      val tables = files.map(interpretFile[Seq[Seq[CorrespondenceExperiment]]])
+      val tables = files.map(IO.interpretFile[Seq[Seq[CorrespondenceExperiment]]])
       tables.foreach(mkTable)
+    }
+
+    if (bagConfigFiles.isDefined) {
+      val files = bagConfigFiles.get.map(name => new File(name))
+      val tables = files.map(IO.interpretFile[Seq[Seq[CorrespondenceExperiment]]])
+      tables.foreach(mkBag)
     }
   }
 }

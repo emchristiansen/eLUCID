@@ -1,9 +1,12 @@
+import java.io.File
+
 import nebula._
 
 RuntimeConfig(
-  projectRoot = "week6/LUCID",
+  projectRoot = new File(Global.homeDirectory, "week6/LUCID"),
+  nebulaRoot = new File(Global.homeDirectory, "Dropbox/scala/12Summer/nebula"),
   parallel = true,
-  tempDirectory = "/tmp/correspondence",
+  tempDirectory = Some(new File("/tmp/correspondence")),
   deleteTemporaryFiles = false,
   skipCompletedExperiments = true,
   maxSimultaneousExperiments = 8)
