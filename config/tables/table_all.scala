@@ -35,6 +35,7 @@ val l1Matcher = L1Matcher()
 val l2Matcher = L2Matcher()
 val kendallTauMatcher = KendallTauMatcher()
 val cayleyMatcher = CayleyMatcher()
+val cayleyRotate4Matcher = CayleyRotate4Matcher()
 
 // Only certain combinations are legal.
 val extractorsAndMatchers = Seq(
@@ -45,7 +46,8 @@ val extractorsAndMatchers = Seq(
   (sortExtractor, l1Matcher),
   (sortExtractor, l2Matcher),
   (sortExtractor, kendallTauMatcher),
-  (sortExtractor, cayleyMatcher))
+  (sortExtractor, cayleyMatcher),
+  (sortExtractor, cayleyRotate4Matcher))
 
 for (
   detector <- detectors;
