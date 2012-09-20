@@ -7,3 +7,6 @@
 [submodule "external/nebula"]
 	path = external/nebula
 	url = /u/echristiansen/Dropbox/scala/12Summer/nebula
+[submodule "external/LUCIDPresentation"]
+	path = external/LUCIDPresentation
+	url = /u/echristiansen/time/2012_08_19/LUCIDPresentation
