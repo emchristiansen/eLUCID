@@ -4,3 +4,6 @@
 [submodule "external/opencv"]
 	path = external/opencv
 	url = /u/echristiansen/week6/opencv
+[submodule "external/nebula"]
+	path = external/nebula
+	url = /u/echristiansen/Dropbox/scala/12Summer/nebula
