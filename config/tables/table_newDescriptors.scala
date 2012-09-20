@@ -13,20 +13,13 @@ val imageClasses = Seq(
 val otherImages = Seq(2, 4, 6)
 
 val detectors = Seq(
-  BRISKDetector(maxKeyPoints = 100)
-)
+  FASTDetector(maxKeyPoints = 100),
+  BRISKDetector(maxKeyPoints = 100))
 
-// val extractors = for (
-//   patchWidth <- Seq(8);
-//   color <- Seq("Gray", "Lab")
-// ) yield SortExtractor(
-//   normalizeRotation = false,
-//   normalizeScale = false,
-//   patchWidth = patchWidth,
-//   blurWidth = 5,
-//   color = color)
-
-val extractors = List(BRISKExtractor(true, true))
+val extractors = Seq(
+  BRISKExtractor(true, true),
+  FREAKExtractor(false, false),
+  SortExtractor(false, false, 16, 5, "Gray"))
 
 val matchers = Seq(
   L0Matcher())
