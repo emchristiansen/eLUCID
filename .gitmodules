@@ -1,12 +1,9 @@
-[submodule "external/brisk_new"]
-	path = external/brisk_new
-	url = ./external/brisk_new2/
-[submodule "external/opencv"]
-	path = external/opencv
-	url = /u/echristiansen/week6/opencv
-[submodule "external/nebula"]
-	path = external/nebula
-	url = /u/echristiansen/Dropbox/scala/12Summer/nebula
 [submodule "external/LUCIDPresentation"]
 	path = external/LUCIDPresentation
-	url = /u/echristiansen/time/2012_08_19/LUCIDPresentation
+	url = https://github.com/emchristiansen/LUCIDPresentation.git
+[submodule "external/LUCIDOpenCV"]
+	path = external/LUCIDOpenCV
+	url = https://kforge.ros.org/LUCID/LUCIDOpenCV
+[submodule "external/LUCIDNebula"]
+	path = external/LUCIDNebula
+	url = https://kforge.ros.org/LUCID/LUCIDNebula
