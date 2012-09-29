@@ -17,17 +17,18 @@ val detectors = Seq(
   BRISKDetector(maxKeyPoints = 100))
 
 val extractors = Seq(
-  BRISKExtractor(true, true),
-  FREAKExtractor(false, false),
-  SortExtractor(false, false, 16, 5, "Gray"),
+  ELUCIDExtractor(false, false, 16, 3, 3, 5, "Gray"),
   ELUCIDExtractor(false, false, 16, 3, 4, 5, "Gray"),
-  ELUCIDExtractor(false, true, 16, 3, 4, 5, "Gray"),
-  ELUCIDExtractor(true, false, 16, 3, 4, 5, "Gray"),
-  ELUCIDExtractor(true, true, 16, 3, 4, 5, "Gray")
+  ELUCIDExtractor(false, false, 16, 3, 5, 5, "Gray"),
+  ELUCIDExtractor(false, false, 16, 3, 6, 5, "Gray"),
+  ELUCIDExtractor(false, false, 8, 3, 4, 5, "Gray"),
+  ELUCIDExtractor(false, false, 32, 3, 4, 5, "Gray")
 )
 
 val matchers = Seq(
-  L0Matcher())
+  L0Matcher(),
+  CayleyMatcher()
+)
 
 for (
   detector <- detectors;
