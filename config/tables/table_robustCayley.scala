@@ -1,23 +1,23 @@
 import nebula._
 
-val imageClasses = Seq(
-  "bikes", 
-  "light").sorted
-
 // val imageClasses = Seq(
-//   "graffiti", 
-//   "trees", 
-//   "jpeg", 
-//   "boat", 
-//   "bark", 
 //   "bikes", 
-//   "light", 
-//   "wall").sorted
+//   "light").sorted
 
-val otherImages = Seq(4)
+val imageClasses = Seq(
+  "graffiti", 
+  "trees", 
+  "jpeg", 
+  "boat", 
+  "bark", 
+  "bikes", 
+  "light", 
+  "wall").sorted
+
+val otherImages = Seq(2, 4, 6)
 
 val detectors = Seq(
-  FASTDetector(maxKeyPoints = 2)
+  FASTDetector(maxKeyPoints = 100)
 //  BRISKDetector(maxKeyPoints = 100)
 )
 
@@ -38,17 +38,17 @@ val extractorsAndMatchers = Seq(
   //   5,
   //   "Gray"),
   //  CayleyMatcher()),
-  // (SortExtractor(
-  //   false,
-  //   false,
-  //   8,
-  //   5,
-  //   "Gray"),
-  //  L0Matcher()),
+  (SortExtractor(
+    false,
+    false,
+    16,
+    5,
+    "Gray"),
+   L0Matcher()),
   (RawExtractor(
     false,
     false,
-    4,
+    16,
     5,
     "Gray"),
    GeneralizedL0Matcher())
