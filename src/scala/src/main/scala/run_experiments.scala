@@ -67,15 +67,15 @@ object RunExperiments extends OptParse {
       println("There are %s experiments:".format(experiments.size))
       experiments.foreach(println)
 
-      Util.parallelize(experiments).foreach(runExperiment)
+      Util.parallelize(experiments).foreach(runExperiment)      
 
       println("All experiments completed.")
     }
 
-    if (tableConfigFiles.isDefined) {
-      val files = tableConfigFiles.get.map(name => new File(name))
-      val tables = files.map(IO.interpretFile[Seq[Seq[CorrespondenceExperiment]]])
-      tables.foreach(mkTable)
-    }
+        if (tableConfigFiles.isDefined) {
+          val files = tableConfigFiles.get.map(name => new File(name))
+          val tables = files.map(IO.interpretFile[Seq[Seq[CorrespondenceExperiment]]])
+          tables.foreach(mkTable)
+        }
   }
 }

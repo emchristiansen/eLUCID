@@ -1,4 +1,6 @@
 import nebula._
+//import ExtractorParameterized._
+//import MatcherParameterized._
 
 val imageClasses = Seq(
   "graffiti", 
@@ -27,7 +29,7 @@ val extractors = for (
 //   CayleyMatcher())
 
 val matchers = Seq(
-  L0Matcher())
+  CayleyMatcher())
 
 for (
   detector <- detectors;
