@@ -22,6 +22,7 @@ object SFSPipelineBuild extends Build {
       "commons-io" % "commons-io" % "2.3",
       "com.frugalmechanic" % "scala-optparse" % "1.0",
       "nebula" %% "nebula" % "0.1-SNAPSHOT",
+      "org.clapper" %% "grizzled-scala" % "1.0.13",
       "com.twitter" % "util-eval" % "5.3.6"
     )
   )

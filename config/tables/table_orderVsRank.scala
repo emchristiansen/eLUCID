@@ -18,7 +18,7 @@ val detectors = Seq(
 )
 
 val extractors = Seq(
-  SortExtractor(
+  NormalizeExtractor(
     false,
     false,
     25,
@@ -32,9 +32,9 @@ val extractors = Seq(
     "Gray"))
 
 val matchers = Seq(
-  CayleyMatcher(),
   L0Matcher(),
   L1Matcher(),
+  L1IntervalMatcher(),
   L2Matcher()
 )
 
