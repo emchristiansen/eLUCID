@@ -3,12 +3,15 @@ project(lucid)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
+# deal with Octave
 find_package(Octave REQUIRED)
-include_directories(${OCTAVE_INCLUDE_DIRS})
+include_directories(SYSTEM ${OCTAVE_INCLUDE_DIRS})
 
+# add compile instructions
 add_definitions("-msse4.2")
+include_directories(include)
 
-set(BIN_OUTPUT_PATH bin)
-set(LIBRARY_OUTPUT_PATH lib)
+set(BIN_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
 
 add_subdirectory(src)

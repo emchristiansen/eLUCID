@@ -33,5 +33,22 @@
  *
  */
 
-#include "MxArray.hpp"
+#include <lucid/lucid.h>
 
+namespace cv
+{
+  LUCID::LUCID()
+  {
+  }
+
+// Compute the LUCID features on an image
+  void
+  LUCID::compute(const cv::Mat & image, std::vector<KeyPoint>& keypoints, cv::Mat descriptors) const
+  {
+  }
+
+  void
+  LUCID::computeImpl(const cv::Mat&, std::vector<cv::KeyPoint>&, cv::Mat&) const
+  {
+  }
+}
