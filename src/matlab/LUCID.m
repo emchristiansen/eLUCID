@@ -35,6 +35,7 @@ classdef LUCID < helpers.GenericInstaller ...
       'pattern', 'block', ...
       'steerScale', false, ...
       'steerRotation', false ...
+      'useOpenCV', false
       );
   end
   
@@ -101,6 +102,9 @@ classdef LUCID < helpers.GenericInstaller ...
       discFrames = discFrames(:,isVisible);
       frames = frames(:, isVisible);
       
+      if (obj.Opts.useOpenCV)
+        descriptors = mex_lucid(img, frames, discFrames);
+      end
       % Prealocate descriptors
       if strcmp(obj.Opts.pattern, 'block')
         descriptors = zeros(lucidWidth ^ 2,size(discFrames,2));

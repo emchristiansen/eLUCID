@@ -40,17 +40,21 @@
 
 using namespace std;
 
-void mexFunction(int nlhs, mxArray *plhs[],int nrhs,const mxArray *prhs[])
+void
+mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
-    if (nrhs != 1) mexErrMsgTxt("INPUT: [image] ");
-    if (nlhs != 1) mexErrMsgTxt("OUTPUT: [watershed segmentation] ");
+  if (nrhs != 1)
+    mexErrMsgTxt("INPUT: [image] ");
+  if (nlhs != 1)
+    mexErrMsgTxt("OUTPUT: [watershed segmentation] ");
 
-    cv::Mat input = MxArray(prhs[0]).toMat();
-    cv::Mat descriptors;
-    std::vector<cv::KeyPoint> keypoints;
+  cv::Mat input = MxArray(prhs[0]).toMat(), frames = MxArray(prhs[1]).toMat(), diskFrames = MxArray(prhs[2]).toMat();
+  cv::Mat descriptors;
+  // TODO understand frames/diskFrames and write KeyPoint's
+  std::vector < cv::KeyPoint > keypoints;
 
-    cv::LUCID lucid;
-    lucid.compute(input, keypoints, descriptors);
+  cv::LUCID lucid;
+  lucid.compute(input, keypoints, descriptors);
 
-    plhs[0] = MxArray(descriptors);
+  plhs[0] = MxArray(descriptors);
 }
