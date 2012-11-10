@@ -489,7 +489,7 @@ int main(int argc, char *argv[])
   // Default: < 0 "as is", =0 grayscale, > 0 rgb 
   bool cv_image_mode = 0;
 
-  std::string base_file_name = "test";
+  std::string base_file_name = "";
 
   cv::Mat reference_image;
   std::vector<cv::Mat> images;
@@ -703,9 +703,6 @@ int main(int argc, char *argv[])
   //                                                      extractors,
   //                                                      &recognition_rates);             
 
-  std::string bob = "";
-  assert(bob.empty());
-
   lucid::ExperimentDriver::detectionMatchingExperiment(num_features,
                                                        radius,
                                                        reference_image,
@@ -714,7 +711,7 @@ int main(int argc, char *argv[])
                                                        *feature_detector,
                                                        extractors,
                                                        &recognition_rates,
-                                                       "");
+                                                       base_file_name);
 
     
   // Display results.

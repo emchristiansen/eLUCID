@@ -64,8 +64,9 @@ namespace lucid
      * effectively simulates a detector that has repeatability rate of 
      * percent_non_matching. Nearest neighbor recognition rates are returned
      * for each pair of reference image and test image. Where the recognition
-     * rate is the ratio of true matches to valid matches for the particular
-     * descriptor.
+     * rate is the ratio of true matches to ground truth matches. When
+     * percent_non_matching == 0 this represents a detector with perfect
+     * repeatability (this was used in the NIPS experiments).
      */
     static void symmetricMatchingExperiment(
       double percent_non_matching,
