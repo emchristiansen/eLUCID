@@ -177,6 +177,15 @@ namespace lucid
         assert(valid_reference_descs.size() == num_features);
         assert(reference_descs.rows == num_features);
 
+        uint num_valid_ref_descs = 0;
+        for(int v = 0; v < valid_reference_descs.size(); ++v)
+        {
+          if(valid_reference_descs[v])
+          {
+            ++num_valid_ref_descs;
+          }
+        }
+
         cv::Mat test_descs;
         std::vector<bool> valid_test_descs;
         extractor.computeDescriptors(test_images[i],
@@ -185,8 +194,16 @@ namespace lucid
                                      &test_descs);
         assert(valid_test_descs.size() == num_features);
         assert(test_descs.rows == num_features);
-        
 
+        uint num_valid_test_descs = 0;
+        for(int v = 0; v < valid_test_descs.size(); ++v)
+        {
+          if(valid_test_descs[v])
+          {
+            ++num_valid_test_descs;
+          }
+        }
+        
         std::vector<cv::DMatch> matches;
         extractor.matchDescriptors(test_descs,
                                    reference_descs,
@@ -194,6 +211,8 @@ namespace lucid
                                    valid_reference_descs,
                                    &matches);
 
+        std::cout << "num_valid_ref_descs = " << num_valid_ref_descs << std::endl;
+        std::cout << "num_valid_test_descs = " << num_valid_test_descs << std::endl;
         std::cout << "matches.size() = " << matches.size() << std::endl;
         std::cout << "num_features = " << num_features << std::endl;
 
@@ -344,8 +363,8 @@ namespace lucid
         // Cull points that are warped out of bounds.
         if(warped_x > 0 &&
            warped_y > 0 &&
-           test_images[i].cols > warped_x &&
-           test_images[i].rows > warped_y)
+           test_images[i].cols  > warped_x &&
+           test_images[i].rows  > warped_y)
         {
           cv::KeyPoint warped_feature(orig_features[j]);
           warped_feature.pt.x = warped_x;
@@ -414,6 +433,7 @@ namespace lucid
                                      reference_features[j],
                                      &valid_reference_descs,
                                      &reference_descs);
+
         cv::Mat test_descs;
         std::vector<bool> valid_test_descs;
         extractor.computeDescriptors(test_images[j],
@@ -665,8 +685,8 @@ int main(int argc, char *argv[])
   lucid::ELucidDescriptorExtractor elucid_extractor(true);
   extractors.push_back(&elucid_extractor);                     
 
-  // lucid::ELucidBinaryDescriptorExtractor elucid_binary_extractor1(true);
-  // extractors.push_back(&elucid_binary_extractor1);                     
+  lucid::ELucidBinaryDescriptorExtractor elucid_binary_extractor1(true);
+  extractors.push_back(&elucid_binary_extractor1);                     
 
   // lucid::ELucidBinaryDescriptorExtractor elucid_binary_extractor2(true);
   // extractors.push_back(&elucid_binary_extractor2);                     
@@ -674,12 +694,11 @@ int main(int argc, char *argv[])
   // lucid::LucidDescriptorExtractor lucid_extractor(lucid_window_size, 5);
   // extractors.push_back(&lucid_extractor);                     
 
-  // lucid::BriefDescriptorExtractor brief_extractor;
-  // extractors.push_back(&brief_extractor);
+  lucid::BriefDescriptorExtractor brief_extractor;
+  extractors.push_back(&brief_extractor);
 
-  // lucid::OrbDescriptorExtractor orb_extractor;
-  // extractors.push_back(&orb_extractor);                     
-  
+  lucid::OrbDescriptorExtractor orb_extractor;
+  extractors.push_back(&orb_extractor);                     
 
   lucid::FreakDescriptorExtractor freak_extractor;
   extractors.push_back(&freak_extractor);                     
@@ -713,12 +732,28 @@ int main(int argc, char *argv[])
                                                        &recognition_rates,
                                                        base_file_name);
 
+  // Display recognition rates for spreadsheet.
+  for(int j = 0; j < images.size(); ++j)
+  { 
+    for(int i = 0; i < extractors.size(); ++i)
+    {
+      if(i == extractors.size() - 1)
+      {
+        std::cerr << recognition_rates[i][j] << std::endl;
+      }
+      else
+      {
+        std::cerr << recognition_rates[i][j] << ", ";
+      }
+    }
+  }
+  std::cerr << std::endl;
+
     
-  // Display results.
+  // Display recognition_rates to terminal.
   for(int i = 0; i < extractors.size(); ++i)
   {
-
-    std::cerr << std::endl
+    std::cout << std::endl
               << "Using "
               << feature_detector->name()
               << " interest points."
@@ -728,13 +763,12 @@ int main(int argc, char *argv[])
               << std::endl;
     for(int j = 0; j < images.size(); ++j)
     {      
-      std::cerr << "Recognition rate = "
+      std::cout << "Recognition rate = "
                 << recognition_rates[i][j]
                 << std::endl;
     }
   }
-
-  std::cerr << std::endl << std::endl;
+  std::cout << std::endl << std::endl;
 
 
   delete feature_detector;

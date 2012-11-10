@@ -1,5 +1,5 @@
 #!/bin/bash
-g++ -O3 \
+g++ -O2 \
     -march=native \
     -msse4.2 \
     src/lucid/tools/*.cpp \
