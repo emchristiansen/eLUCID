@@ -8,7 +8,6 @@
 #include <opencv2/core/core.hpp>
 #include "lucid/descriptors/descriptor_extractor.h"
 #include "lucid/detectors/feature_detector.h"
-#include "lucid/tools/experiment_results.h"
 #include <vector>
 #include <string>
 
@@ -54,6 +53,7 @@ namespace lucid
       const std::vector<cv::Matx33f> homographies,
       const lucid::FeatureDetector& detector,
       const std::vector<lucid::DescriptorExtractor*>& extractors,
+      std::vector<std::vector<float> > *recognition_rates,
       const std::string output_file_base);
 
     /**

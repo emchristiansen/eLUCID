@@ -3,10 +3,8 @@
 #include "lucid/tools/experiment_driver.h"
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
 
 #include "lucid/tools/util.h"
-#include "lucid/tools/experiment_results.h"
 #include "lucid/detectors/fast_feature_detector.h"
 #include "lucid/detectors/harris_feature_detector.h"
 #include "lucid/detectors/brisk_feature_detector.h"
@@ -15,6 +13,7 @@
 #include "lucid/detectors/surf_feature_detector.h"
 #include "lucid/descriptors/lucid_descriptor_extractor.h"
 #include "lucid/descriptors/elucid_descriptor_extractor.h"
+#include "lucid/descriptors/freak_descriptor_extractor.h"
 #include "lucid/descriptors/elucid_binary_descriptor_extractor.h"
 #include "lucid/descriptors/brief_descriptor_extractor.h"
 #include "lucid/descriptors/brisk_descriptor_extractor.h"
@@ -60,6 +59,7 @@ namespace lucid
     const std::vector<cv::Matx33f> homographies,
     const lucid::FeatureDetector& detector,
     const std::vector<lucid::DescriptorExtractor*>& extractors,
+    std::vector<std::vector<float> > *recognition_rates,
     const std::string output_file_base)
   {
     // Detect features in first image.
@@ -67,6 +67,12 @@ namespace lucid
     detector.detectFeatures(reference_image,
                             max_features,
                             &orig_ref_features);
+
+    // Make room for recognition rates.
+    for(int e = 0; e < extractors.size(); ++e)
+    {
+      recognition_rates->push_back(std::vector<float>());
+    }
 
     // Detect features in other images.
     for(int i = 0; i < test_images.size(); ++i)
@@ -180,53 +186,100 @@ namespace lucid
         assert(valid_test_descs.size() == num_features);
         assert(test_descs.rows == num_features);
         
-        std::vector<std::vector<cv::DMatch> > matches;
-        // Match to everything.
-        extractor.knnMatchDescriptors(num_features,
-                                      test_descs,
-                                      reference_descs,
-                                      valid_test_descs,
-                                      valid_reference_descs,
-                                      &matches);
 
-        std::fstream output_file;
-        std::stringstream ss;
-        ss << output_file_base 
-           << "_"
-           << "Image1_" << i+2
-           << "_"
-           << num_features
-           << "_"
-           << extractor.name() 
-           << "_"
-           << detector.name()
-           << ".out";
+        std::vector<cv::DMatch> matches;
+        extractor.matchDescriptors(test_descs,
+                                   reference_descs,
+                                   valid_test_descs,
+                                   valid_reference_descs,
+                                   &matches);
 
-        const char* file_name = ss.str().c_str();
-        output_file.open(file_name, std::fstream::out);
+        std::cout << "matches.size() = " << matches.size() << std::endl;
+        std::cout << "num_features = " << num_features << std::endl;
 
-        // Write distances to file and free up memory.
+        uint true_matches = 0;
+        uint valid_matches = 0;
+        uint false_matches = 0;
         for(int m = 0; m < matches.size(); ++m)
         {
-          for(int k = 0; k < matches[m].size(); ++k)
+          int ref_idx = matches[m].trainIdx;
+          int test_idx = matches[m].queryIdx;
+          assert(valid_test_descs[test_idx]);
+          assert(valid_reference_descs[ref_idx]);
+
+          if(true_match_idxs[ref_idx] == test_idx)
           {
-            int ref_idx = matches[m][k].trainIdx;
-            int test_idx = matches[m][k].queryIdx;
-            assert(valid_test_descs[test_idx]);
-            assert(valid_reference_descs[ref_idx]);
-            
-            if(true_match_idxs[ref_idx] == test_idx)
-            {
-              output_file << "1 ";
-            }
-            else
-            {
-              output_file << "0 ";
-            }
-            output_file << matches[m][k].distance << std::endl;
+            ++true_matches;
           }
+          else
+          {
+            ++false_matches;
+          }
+          ++valid_matches;
         }
-        output_file.close();
+
+        assert((false_matches + true_matches) == valid_matches);
+        assert(valid_matches <= num_features);
+        
+        // NIPS metric.
+        float rec_rate = static_cast<float>(true_matches) / num_features;
+
+        std::cout << "rec_rate = " << rec_rate << std::endl; 
+        (*recognition_rates)[e].push_back(rec_rate);
+    
+        if(!output_file_base.empty())
+        {
+          /*Export data for ROC curves to file*/
+          std::vector<std::vector<cv::DMatch> > all_matches;
+          // Match to everything.
+          extractor.knnMatchDescriptors(num_features,
+                                        test_descs,
+                                        reference_descs,
+                                        valid_test_descs,
+                                        valid_reference_descs,
+                                        &all_matches);
+
+          std::fstream output_file;
+          std::stringstream ss;
+          ss << output_file_base 
+             << "_"
+             << "Image1_" << i+2
+             << "_"
+             << num_features
+             << "_"
+             << extractor.name() 
+             << "_"
+             << detector.name()
+             << ".out";
+
+          const char* file_name = ss.str().c_str();
+          output_file.open(file_name, std::fstream::out);
+
+          std::cout << "Writing data to file " << file_name << std::endl;
+
+          // Write distances to file and free up memory.
+          for(int m = 0; m < all_matches.size(); ++m)
+          {
+            for(int k = 0; k < all_matches[m].size(); ++k)
+            {
+              int ref_idx = all_matches[m][k].trainIdx;
+              int test_idx = all_matches[m][k].queryIdx;
+              assert(valid_test_descs[test_idx]);
+              assert(valid_reference_descs[ref_idx]);
+            
+              if(true_match_idxs[ref_idx] == test_idx)
+              {
+                output_file << "1 ";
+              }
+              else
+              {
+                output_file << "0 ";
+              }
+              output_file << all_matches[m][k].distance << std::endl;
+            }
+          }
+          output_file.close();
+        }
       }
     }
   }
@@ -401,13 +454,11 @@ namespace lucid
         assert((false_matches + true_matches) == valid_matches);
         assert(valid_matches <= num_features);
         
-        float rec_rate = static_cast<float>(true_matches) / valid_matches;
+        // NIPS metric.
+        float rec_rate = static_cast<float>(true_matches) / num_features;
 
-      // NIPS metric.
-//        float rec_rate = static_cast<float>(true_matches) / num_features;
-
-      std::cout << "rec_rate = " << rec_rate << std::endl; 
-      (*recognition_rates)[i].push_back(rec_rate);
+        std::cout << "rec_rate = " << rec_rate << std::endl; 
+        (*recognition_rates)[i].push_back(rec_rate);
       }
     }
   }
@@ -611,8 +662,8 @@ int main(int argc, char *argv[])
     }
   }
 
-  // lucid::ELucidDescriptorExtractor elucid_extractor(true);
-  // extractors.push_back(&elucid_extractor);                     
+  lucid::ELucidDescriptorExtractor elucid_extractor(true);
+  extractors.push_back(&elucid_extractor);                     
 
   // lucid::ELucidBinaryDescriptorExtractor elucid_binary_extractor1(true);
   // extractors.push_back(&elucid_binary_extractor1);                     
@@ -629,16 +680,20 @@ int main(int argc, char *argv[])
   // lucid::OrbDescriptorExtractor orb_extractor;
   // extractors.push_back(&orb_extractor);                     
   
-  // lucid::BriskDescriptorExtractor brisk_extractor;
-  // extractors.push_back(&brisk_extractor);                     
-  
-  // lucid::SurfDescriptorExtractor surf_extractor;
-  // extractors.push_back(&surf_extractor);                     
-  
-  // lucid::SiftDescriptorExtractor sift_extractor;
-  // extractors.push_back(&sift_extractor);                     
 
-  // std::vector<std::vector<float> > recognition_rates;
+  lucid::FreakDescriptorExtractor freak_extractor;
+  extractors.push_back(&freak_extractor);                     
+
+  lucid::BriskDescriptorExtractor brisk_extractor;
+  extractors.push_back(&brisk_extractor);                     
+  
+  lucid::SurfDescriptorExtractor surf_extractor;
+  extractors.push_back(&surf_extractor);                     
+  
+  lucid::SiftDescriptorExtractor sift_extractor;
+  extractors.push_back(&sift_extractor);                     
+
+  std::vector<std::vector<float> > recognition_rates;
   // lucid::ExperimentDriver::symmetricMatchingExperiment(percent_non_matching,
   //                                                      num_features,
   //                                                      reference_image,
@@ -647,25 +702,42 @@ int main(int argc, char *argv[])
   //                                                      *feature_detector,
   //                                                      extractors,
   //                                                      &recognition_rates);             
+
+  std::string bob = "";
+  assert(bob.empty());
+
+  lucid::ExperimentDriver::detectionMatchingExperiment(num_features,
+                                                       radius,
+                                                       reference_image,
+                                                       images,
+                                                       homographies,
+                                                       *feature_detector,
+                                                       extractors,
+                                                       &recognition_rates,
+                                                       "");
+
     
-  // // Display results.
-  // for(int i = 0; i < extractors.size(); ++i)
-  // {
+  // Display results.
+  for(int i = 0; i < extractors.size(); ++i)
+  {
 
-  //   std::cerr << feature_detector->name()
-  //             << std::endl
-  //             << extractors[i]->name()
-  //             << " descriptors: "
-  //             << std::endl;
-  //   for(int j = 0; j < images.size(); j+=2)
-  //   {      
-  //     std::cerr << "Recognition rate = "
-  //               << recognition_rates[i][j]
-  //               << std::endl;
-  //   }
-  // }
+    std::cerr << std::endl
+              << "Using "
+              << feature_detector->name()
+              << " interest points."
+              << std::endl
+              << extractors[i]->name()
+              << " descriptors: "
+              << std::endl;
+    for(int j = 0; j < images.size(); ++j)
+    {      
+      std::cerr << "Recognition rate = "
+                << recognition_rates[i][j]
+                << std::endl;
+    }
+  }
 
-  // std::cerr << std::endl << std::endl;
+  std::cerr << std::endl << std::endl;
 
 
   delete feature_detector;

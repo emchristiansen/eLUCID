@@ -323,38 +323,41 @@ namespace lucid
 
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
-      const __m128i *test_desc = test_descriptors.ptr<__m128i>(i);
-      std::vector<cv::DMatch> cur_matches;
-      for(int j = 0; j < train_descriptors.rows; ++j)
+      if(valid_test_descriptors[i])
       {
-        if(valid_test_descriptors[i] && valid_train_descriptors[j])
+        const __m128i *test_desc = test_descriptors.ptr<__m128i>(i);
+        std::vector<cv::DMatch> cur_matches;
+        for(int j = 0; j < train_descriptors.rows; ++j)
         {
-          const __m128i *train_desc = train_descriptors.ptr<__m128i>(j);
-          unsigned long int cur_dist = 0;
-          for(int d = 0; d < desc_width / 16; ++d)
+          if(valid_train_descriptors[j])
           {
-            // Load descriptor elements for comparison.
-            xmm0.m128i = _mm_load_si128(&(test_desc[d]));
-            xmm1.m128i = _mm_load_si128(&(train_desc[d]));
+            const __m128i *train_desc = train_descriptors.ptr<__m128i>(j);
+            unsigned long int cur_dist = 0;
+            for(int d = 0; d < desc_width / 16; ++d)
+            {
+              // Load descriptor elements for comparison.
+              xmm0.m128i = _mm_load_si128(&(test_desc[d]));
+              xmm1.m128i = _mm_load_si128(&(train_desc[d]));
             
-            // Find exor
-            xmm0.m128i = _mm_xor_si128(xmm0.m128i, xmm1.m128i);
+              // Find exor
+              xmm0.m128i = _mm_xor_si128(xmm0.m128i, xmm1.m128i);
               
-            // Sum upper and lower halfs 
-            cur_dist += _mm_popcnt_u64(xmm0.m128i_u64[0]) +
-              _mm_popcnt_u64(xmm0.m128i_u64[1]);
+              // Sum upper and lower halfs 
+              cur_dist += _mm_popcnt_u64(xmm0.m128i_u64[0]) +
+                _mm_popcnt_u64(xmm0.m128i_u64[1]);
+            }
+            cur_matches.push_back(cv::DMatch(i, j, cur_dist));
           }
-          cur_matches.push_back(cv::DMatch(i, j, cur_dist));
         }
-      }
       
-      // Sort by smallest distance.
-      std::sort(cur_matches.begin(), cur_matches.end(), Util::compareMatches);    
-      if(cur_matches.size() > k)
-      {
-        cur_matches.resize(k);
+        // Sort by smallest distance.
+        std::sort(cur_matches.begin(), cur_matches.end(), Util::compareMatches);    
+        if(cur_matches.size() > k)
+        {
+          cur_matches.resize(k);
+        }
+        matches->push_back(cur_matches);
       }
-      matches->push_back(cur_matches);
     }
 
     std::clock_t stop = std::clock();
@@ -395,37 +398,40 @@ namespace lucid
 
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
-      const __m128i *test_desc = test_descriptors.ptr<__m128i>(i);
-      int best_match_idx = -1;
-      uint best_match_distance = ~0;
-      for(int j = 0; j < train_descriptors.rows; ++j)
+      if(valid_test_descriptors[i])
       {
-        if(valid_test_descriptors[i] && valid_train_descriptors[j])
+        const __m128i *test_desc = test_descriptors.ptr<__m128i>(i);
+        int best_match_idx = -1;
+        uint best_match_distance = ~0;
+        for(int j = 0; j < train_descriptors.rows; ++j)
         {
-          const __m128i *train_desc = train_descriptors.ptr<__m128i>(j);
-          unsigned long int cur_dist = 0;
-          for(int k = 0; k < desc_width / 16; ++k)
+          if(valid_train_descriptors[j])
           {
-            // Load descriptor elements for comparison.
-            xmm0.m128i = _mm_load_si128(&(test_desc[k]));
-            xmm1.m128i = _mm_load_si128(&(train_desc[k]));
+            const __m128i *train_desc = train_descriptors.ptr<__m128i>(j);
+            unsigned long int cur_dist = 0;
+            for(int k = 0; k < desc_width / 16; ++k)
+            {
+              // Load descriptor elements for comparison.
+              xmm0.m128i = _mm_load_si128(&(test_desc[k]));
+              xmm1.m128i = _mm_load_si128(&(train_desc[k]));
             
-            // Find exor
-            xmm0.m128i = _mm_xor_si128(xmm0.m128i, xmm1.m128i);
+              // Find exor
+              xmm0.m128i = _mm_xor_si128(xmm0.m128i, xmm1.m128i);
               
-            // Sum upper and lower halfs 
-            cur_dist += _mm_popcnt_u64(xmm0.m128i_u64[0]) +
-              _mm_popcnt_u64(xmm0.m128i_u64[1]);
-          }
+              // Sum upper and lower halfs 
+              cur_dist += _mm_popcnt_u64(xmm0.m128i_u64[0]) +
+                _mm_popcnt_u64(xmm0.m128i_u64[1]);
+            }
 
-          if(cur_dist < best_match_distance)
-          {
-            best_match_distance = cur_dist;
-            best_match_idx = j;
+            if(cur_dist < best_match_distance)
+            {
+              best_match_distance = cur_dist;
+              best_match_idx = j;
+            }
           }
         }
+        matches->push_back(cv::DMatch(i, best_match_idx, best_match_distance));
       }
-      matches->push_back(cv::DMatch(i, best_match_idx, best_match_distance));
     }
     std::clock_t stop = std::clock();
     if(_useWideDesc)

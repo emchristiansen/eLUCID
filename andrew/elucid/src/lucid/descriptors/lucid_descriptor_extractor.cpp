@@ -135,44 +135,46 @@ namespace lucid
 
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
-      const ushort *test_desc = test_descriptors.ptr<ushort>(i);
-      std::vector<cv::DMatch> cur_matches;
-      
-      for(int j = 0; j < train_descriptors.rows; ++j)
+      if(valid_test_descriptors[i])
       {
-        const ushort *train_desc = train_descriptors.ptr<ushort>(j);
-        unsigned int cur_dist = 0;
-        if(valid_test_descriptors[i] && valid_train_descriptors[j])
+        const ushort *test_desc = test_descriptors.ptr<ushort>(i);
+        std::vector<cv::DMatch> cur_matches;
+      
+        for(int j = 0; j < train_descriptors.rows; ++j)
         {
-          // for(int l = 0; l < desc_width; ++l)
-          // {
-          //   cur_dist += train_desc[l] != test_desc[l] ? 1 : 0;
-          // }
-
-          // Kendall's Tau
-          for(int l1 = 0; l1 < desc_width; ++l1)
+          const ushort *train_desc = train_descriptors.ptr<ushort>(j);
+          unsigned int cur_dist = 0;
+          if(valid_train_descriptors[j])
           {
-            for(int l2 = l1 + 1; l2 < desc_width; ++l2)
+            // for(int l = 0; l < desc_width; ++l)
+            // {
+            //   cur_dist += train_desc[l] != test_desc[l] ? 1 : 0;
+            // }
+
+            // Kendall's Tau
+            for(int l1 = 0; l1 < desc_width; ++l1)
             {
-              cur_dist +=
-                (train_desc[l1] < train_desc[l2]) &&
-                (test_desc[l1] >= test_desc[l2]);
+              for(int l2 = l1 + 1; l2 < desc_width; ++l2)
+              {
+                cur_dist +=
+                  (train_desc[l1] < train_desc[l2]) &&
+                  (test_desc[l1] >= test_desc[l2]);
+              }
             }
+
+            cur_matches.push_back(cv::DMatch(i, j, cur_dist));
           }
-
-          cur_matches.push_back(cv::DMatch(i, j, cur_dist));
         }
-      }
       
-      // Sort by smallest distance.
-      std::sort(cur_matches.begin(), cur_matches.end(), Util::compareMatches);    
-      if(cur_matches.size() > k)
-      {
-        cur_matches.resize(k);
-      }
+        // Sort by smallest distance.
+        std::sort(cur_matches.begin(), cur_matches.end(), Util::compareMatches);    
+        if(cur_matches.size() > k)
+        {
+          cur_matches.resize(k);
+        }
       
-      matches->push_back(cur_matches);
-
+        matches->push_back(cur_matches);
+      }
     }
 
     std::clock_t stop = std::clock();
@@ -203,31 +205,33 @@ namespace lucid
     
       for(int i = 0; i < test_descriptors.rows; ++i)
       {
-        const ushort *test_desc = test_descriptors.ptr<ushort>(i);
-        int best_match_idx = -1;
-        uint best_match_distance = ~0;
-        
-        for(int j = 0; j < train_descriptors.rows; ++j)
+        if(valid_test_descriptors[i])
         {
-          if(valid_test_descriptors[i] && valid_test_descriptors[j])
+          const ushort *test_desc = test_descriptors.ptr<ushort>(i);
+          int best_match_idx = -1;
+          uint best_match_distance = ~0;
+        
+          for(int j = 0; j < train_descriptors.rows; ++j)
           {
-            const ushort *train_desc = train_descriptors.ptr<ushort>(j);
-            uint cur_dist = 0;
-            for(int k = 0; k < desc_width; ++k)
+            if(valid_test_descriptors[j])
             {
-              cur_dist += train_desc[k] != test_desc[k] ? 1 : 0;
-            }
+              const ushort *train_desc = train_descriptors.ptr<ushort>(j);
+              uint cur_dist = 0;
+              for(int k = 0; k < desc_width; ++k)
+              {
+                cur_dist += train_desc[k] != test_desc[k] ? 1 : 0;
+              }
 
-            if(cur_dist < best_match_distance)
-            {
-              best_match_distance = cur_dist;
-              best_match_idx = j;
+              if(cur_dist < best_match_distance)
+              {
+                best_match_distance = cur_dist;
+                best_match_idx = j;
+              }
             }
           }
+          matches->push_back(cv::DMatch(i, best_match_idx, best_match_distance));
         }
-        matches->push_back(cv::DMatch(i, best_match_idx, best_match_distance));
       }
-
     // if(desc_width < 2<<8)
     // {
     //   for(int i = 0; i < test_descriptors.rows; ++i)
