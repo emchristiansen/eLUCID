@@ -211,6 +211,7 @@ namespace lucid
                                    valid_reference_descs,
                                    &matches);
 
+        std::cout << "descriptor type = " << test_descs.type() << std::endl;
         std::cout << "num_valid_ref_descs = " << num_valid_ref_descs << std::endl;
         std::cout << "num_valid_test_descs = " << num_valid_test_descs << std::endl;
         std::cout << "matches.size() = " << matches.size() << std::endl;
@@ -685,11 +686,11 @@ int main(int argc, char *argv[])
   lucid::ELucidDescriptorExtractor elucid_extractor(true);
   extractors.push_back(&elucid_extractor);                     
 
-  lucid::ELucidBinaryDescriptorExtractor elucid_binary_extractor1(true);
+  lucid::ELucidBinaryDescriptorExtractor elucid_binary_extractor1(false);
   extractors.push_back(&elucid_binary_extractor1);                     
 
-  // lucid::ELucidBinaryDescriptorExtractor elucid_binary_extractor2(true);
-  // extractors.push_back(&elucid_binary_extractor2);                     
+  lucid::ELucidBinaryDescriptorExtractor elucid_binary_extractor2(true);
+  extractors.push_back(&elucid_binary_extractor2);                     
 
   // lucid::LucidDescriptorExtractor lucid_extractor(lucid_window_size, 5);
   // extractors.push_back(&lucid_extractor);                     
@@ -769,6 +770,12 @@ int main(int argc, char *argv[])
     }
   }
   std::cout << std::endl << std::endl;
+
+  std::cout << "CV_8UC1 = " << CV_8UC1 << std::endl;
+
+  // SIFT and SURF use this type.
+  std::cout << "CV_32FC1 = " << CV_32FC1 << std::endl;
+  std::cout << "CV_64FC1 = " << CV_64FC1 << std::endl;
 
 
   delete feature_detector;

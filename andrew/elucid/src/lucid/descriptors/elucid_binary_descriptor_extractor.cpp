@@ -65,6 +65,8 @@ namespace lucid
     
     uchar pixels[num_samples];
 
+    valid_descriptors->reserve(key_points.size());
+
     // TODO: Clean this up and don't use redundant code
     if(!_useWideDesc)
     {
@@ -142,44 +144,48 @@ namespace lucid
           (x + patch_size/2) < image.cols &&
           (y + patch_size/2) < image.rows);
 
-        // TODO: Replace this by directly accessing pattern pixels
-        cv::Mat patch;
-        getRectSubPix(blurred_image,
-                      cv::Size(patch_size, patch_size),
-                      key_points[k].pt,
-                      patch);
+        if((*valid_descriptors)[k])
+        {
+
+          // TODO: Replace this by directly accessing pattern pixels
+          cv::Mat patch;
+          getRectSubPix(blurred_image,
+                        cv::Size(patch_size, patch_size),
+                        key_points[k].pt,
+                        patch);
         
-        uchar* patch_ptr = patch.data;
+          uchar* patch_ptr = patch.data;
 
-        for(int p = 0; p < num_samples; ++p)
-        {
-          pixels[p] = patch_ptr[pattern[p][1] * patch_size + pattern[p][0]];
-        } 
+          for(int p = 0; p < num_samples; ++p)
+          {
+            pixels[p] = patch_ptr[pattern[p][1] * patch_size + pattern[p][0]];
+          } 
 
-        int bin_width = 1;
-        uchar temp_desc[num_samples];
-        Util::getRankVectors2(num_samples,
-                              bin_width,
-                              pixels,
-                              &(temp_desc[0]));
+          int bin_width = 1;
+          uchar temp_desc[num_samples];
+          Util::getRankVectors2(num_samples,
+                                bin_width,
+                                pixels,
+                                &(temp_desc[0]));
 
-        int next_idx = 0;
-        bin_width = 12;
-        for(int i = 0; i < 32; i+=2)
-        {
-          cur_desc[next_idx++] =
-            lut_upper_eight[temp_desc[i] / bin_width] |
-            lut_lower_eight[temp_desc[i+1] / bin_width];
-        }
+          int next_idx = 0;
+          bin_width = 12;
+          for(int i = 0; i < 32; i+=2)
+          {
+            cur_desc[next_idx++] =
+              lut_upper_eight[temp_desc[i] / bin_width] |
+              lut_lower_eight[temp_desc[i+1] / bin_width];
+          }
 
-        bin_width = 24;
-        for(int i = 32; i < num_samples; i+=4)
-        {
-          cur_desc[next_idx++] =
-            lut_lowest_four[temp_desc[i] / bin_width] | 
-            lut_lower_four[temp_desc[i+1] / bin_width] |
-            lut_upper_four[temp_desc[i+2] / bin_width] | 
-            lut_upper_most_four[temp_desc[i+3] / bin_width];
+          bin_width = 24;
+          for(int i = 32; i < num_samples; i+=4)
+          {
+            cur_desc[next_idx++] =
+              lut_lowest_four[temp_desc[i] / bin_width] | 
+              lut_lower_four[temp_desc[i+1] / bin_width] |
+              lut_upper_four[temp_desc[i+2] / bin_width] | 
+              lut_upper_most_four[temp_desc[i+3] / bin_width];
+          }
         }
       }
 
@@ -255,50 +261,53 @@ namespace lucid
           (x + patch_size/2) < image.cols &&
           (y + patch_size/2) < image.rows);
 
-        // TODO: Replace this by directly accessing pattern pixels
-        cv::Mat patch;
-        getRectSubPix(blurred_image,
-                      cv::Size(patch_size, patch_size),
-                      key_points[k].pt,
-                      patch);
+        if((*valid_descriptors)[k])
+        {
+
+          // TODO: Replace this by directly accessing pattern pixels
+          cv::Mat patch;
+          getRectSubPix(blurred_image,
+                        cv::Size(patch_size, patch_size),
+                        key_points[k].pt,
+                        patch);
         
-        uchar* patch_ptr = patch.data;
+          uchar* patch_ptr = patch.data;
 
-        for(int p = 0; p < num_samples; ++p)
-        {
-          pixels[p] = patch_ptr[pattern[p][1] * patch_size + pattern[p][0]];
-        } 
+          for(int p = 0; p < num_samples; ++p)
+          {
+            pixels[p] = patch_ptr[pattern[p][1] * patch_size + pattern[p][0]];
+          } 
 
-        int bin_width = 1;
-        uchar temp_desc[num_samples];
-        Util::getRankVectors2(num_samples,
-                              bin_width,
-                              pixels,
-                              &(temp_desc[0]));
+          int bin_width = 1;
+          uchar temp_desc[num_samples];
+          Util::getRankVectors2(num_samples,
+                                bin_width,
+                                pixels,
+                                &(temp_desc[0]));
 
-        int next_idx = 0;
-        bin_width = 6;
-        for(int i = 0; i < 32; i++)
-        {
-          cur_desc[next_idx++] = lut_sixteen[temp_desc[i] / bin_width];
-        }
+          int next_idx = 0;
+          bin_width = 6;
+          for(int i = 0; i < 32; i++)
+          {
+            cur_desc[next_idx++] = lut_sixteen[temp_desc[i] / bin_width];
+          }
 
 
-        bin_width = 12;
-        for(int i = 32; i < num_samples; i+=2)
-        {
-          cur_desc[next_idx++] =
-            lut_upper_eight[temp_desc[i] / bin_width] |
-            lut_lower_eight[temp_desc[i+1] / bin_width];
+          bin_width = 12;
+          for(int i = 32; i < num_samples; i+=2)
+          {
+            cur_desc[next_idx++] =
+              lut_upper_eight[temp_desc[i] / bin_width] |
+              lut_lower_eight[temp_desc[i+1] / bin_width];
+          }
         }
       }
-
-      std::clock_t stop = std::clock();
-      std::cout << "Time to compute eLUCID 512 bit descriptors "
-                << (1000.0*(stop - start)) / CLOCKS_PER_SEC 
-                << "ms"
-                << std::endl;
-      *descriptors = descs;
+        std::clock_t stop = std::clock();
+        std::cout << "Time to compute eLUCID 512 bit descriptors "
+                  << (1000.0*(stop - start)) / CLOCKS_PER_SEC 
+                  << "ms"
+                  << std::endl;
+        *descriptors = descs;
     }
   }
 
