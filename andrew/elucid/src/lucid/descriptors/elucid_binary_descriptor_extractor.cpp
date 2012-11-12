@@ -60,7 +60,6 @@ namespace lucid
              blurred_image,
              cv::Size(_blur_radius, _blur_radius));
 
-    const int patch_size = 45;
     const int num_channels = image.channels();
     
     uchar pixels[num_samples];
@@ -71,65 +70,26 @@ namespace lucid
     if(!_useWideDesc)
     {
       int desc_width = 32;
+      assert(desc_width == num_samples / 2);
       cv::Mat descs(key_points.size(),
                     desc_width,
                     CV_8UC1);
 
-      /* Sampled Unary Representation Lookup Tables*/
-      uchar lut_lower_eight[8] =
+      /* Unary Representation Lookup Tables*/
+      uchar lut_lower[4] =
         {
           0x00,
           0x01,
           0x03,
           0x07,
-          0x0f,
-          0x0e,
-          0x0c,
-          0x08,
         };
 
-      uchar lut_upper_eight[8] =
+      uchar lut_upper[4] =
         {
           0x00,
           0x10,
           0x30,
           0x70,
-          0xf0,
-          0xe0,
-          0xc0,
-          0x80,
-        };
-
-      uchar lut_lowest_four[4] =
-        {
-          0x00,
-          0x01,
-          0x03,
-          0x02,
-        };
-
-      uchar lut_lower_four[4] =
-        {
-          0x00,
-          0x04,
-          0x0c,
-          0x08,
-        };
-
-      uchar lut_upper_four[4] =
-        {
-          0x00,
-          0x10,
-          0x30,
-          0x20,
-        };
-
-      uchar lut_upper_most_four[4] =
-        {
-          0x00,
-          0x40,
-          0xc0,
-          0x80,
         };
 
       for(int k = 0; k < key_points.size(); ++k)
@@ -161,7 +121,7 @@ namespace lucid
             pixels[p] = patch_ptr[pattern[p][1] * patch_size + pattern[p][0]];
           } 
 
-          int bin_width = 1;
+          int bin_width = 16;
           uchar temp_desc[num_samples];
           Util::getRankVectors2(num_samples,
                                 bin_width,
@@ -169,25 +129,13 @@ namespace lucid
                                 &(temp_desc[0]));
 
           int next_idx = 0;
-          bin_width = 12;
-          for(int i = 0; i < 32; i+=2)
+          for(int i = 0; i < num_samples; i+=2)
           {
             cur_desc[next_idx++] =
-              lut_upper_eight[temp_desc[i] / bin_width] |
-              lut_lower_eight[temp_desc[i+1] / bin_width];
-          }
-
-          bin_width = 24;
-          for(int i = 32; i < num_samples; i+=4)
-          {
-            cur_desc[next_idx++] =
-              lut_lowest_four[temp_desc[i] / bin_width] | 
-              lut_lower_four[temp_desc[i+1] / bin_width] |
-              lut_upper_four[temp_desc[i+2] / bin_width] | 
-              lut_upper_most_four[temp_desc[i+3] / bin_width];
+              lut_lower[temp_desc[i]] | lut_upper[temp_desc[i+1]];
           }
         }
-      }
+      } 
 
       std::clock_t stop = std::clock();
       std::cout << "Time to compute eLUCID 256 bit descriptors "
@@ -199,14 +147,15 @@ namespace lucid
     else
     {
       int desc_width = 64;
+      assert(desc_width == num_samples);
       cv::Mat descs(key_points.size(),
                     desc_width,
                     CV_8UC1);
 
       /* Sampled Unary Representation Lookup Tables*/
-      uchar lut_sixteen[16] =
+      uchar lut[8] =
         {
-          0x00,
+          0x00,      
           0x01,
           0x03,
           0x07,
@@ -214,39 +163,6 @@ namespace lucid
           0x1f,
           0x3f,
           0x7f,
-          0xff,      
-          0xfe,
-          0xfc,
-          0xf8,
-          0xf0,
-          0xe0,
-          0xc0,
-          0x80,
-        };
-
-
-      uchar lut_lower_eight[8] =
-        {
-          0x00,
-          0x01,
-          0x03,
-          0x07,
-          0x0f,
-          0x0e,
-          0x0c,
-          0x08,
-        };
-
-      uchar lut_upper_eight[8] =
-        {
-          0x00,
-          0x10,
-          0x30,
-          0x70,
-          0xf0,
-          0xe0,
-          0xc0,
-          0x80,
         };
 
       for(int k = 0; k < key_points.size(); ++k)
@@ -278,28 +194,18 @@ namespace lucid
             pixels[p] = patch_ptr[pattern[p][1] * patch_size + pattern[p][0]];
           } 
 
-          int bin_width = 1;
+          int bin_width = 8;
           uchar temp_desc[num_samples];
           Util::getRankVectors2(num_samples,
                                 bin_width,
                                 pixels,
                                 &(temp_desc[0]));
 
-          int next_idx = 0;
-          bin_width = 6;
-          for(int i = 0; i < 32; i++)
+          for(int i = 0; i < num_samples; i++)
           {
-            cur_desc[next_idx++] = lut_sixteen[temp_desc[i] / bin_width];
+            cur_desc[i] = lut[temp_desc[i]];
           }
 
-
-          bin_width = 12;
-          for(int i = 32; i < num_samples; i+=2)
-          {
-            cur_desc[next_idx++] =
-              lut_upper_eight[temp_desc[i] / bin_width] |
-              lut_lower_eight[temp_desc[i+1] / bin_width];
-          }
         }
       }
         std::clock_t stop = std::clock();

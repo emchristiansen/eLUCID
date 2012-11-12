@@ -9,6 +9,7 @@
 #include "lucid/detectors/harris_feature_detector.h"
 #include "lucid/detectors/brisk_feature_detector.h"
 #include "lucid/detectors/sift_feature_detector.h"
+#include "lucid/detectors/orb_feature_detector.h"
 #include "lucid/detectors/censure_feature_detector.h"
 #include "lucid/detectors/surf_feature_detector.h"
 #include "lucid/descriptors/lucid_descriptor_extractor.h"
@@ -263,14 +264,12 @@ namespace lucid
           std::stringstream ss;
           ss << output_file_base 
              << "_"
-             << "Image1_" << i+2
-             << "_"
              << num_features
              << "_"
              << extractor.name() 
              << "_"
              << detector.name()
-             << ".out";
+             << "IP.out";
 
           const char* file_name = ss.str().c_str();
           output_file.open(file_name, std::fstream::out);
@@ -362,10 +361,10 @@ namespace lucid
         warped_y /= w;
 
         // Cull points that are warped out of bounds.
-        if(warped_x > 0 &&
-           warped_y > 0 &&
-           test_images[i].cols  > warped_x &&
-           test_images[i].rows  > warped_y)
+        if(warped_x > 50 &&
+           warped_y > 50 &&
+           test_images[i].cols - 50  > warped_x &&
+           test_images[i].rows - 50 > warped_y)
         {
           cv::KeyPoint warped_feature(orig_features[j]);
           warped_feature.pt.x = warped_x;
@@ -435,12 +434,31 @@ namespace lucid
                                      &valid_reference_descs,
                                      &reference_descs);
 
+        uint num_valid_ref_descs = 0;
+        for(int v = 0; v < valid_reference_descs.size(); ++v)
+        {
+          if(valid_reference_descs[v])
+          {
+            ++num_valid_ref_descs;
+          }
+        }
+
         cv::Mat test_descs;
         std::vector<bool> valid_test_descs;
         extractor.computeDescriptors(test_images[j],
                                      test_features[j],
                                      &valid_test_descs,
                                      &test_descs);
+
+        uint num_valid_test_descs = 0;
+        for(int v = 0; v < valid_test_descs.size(); ++v)
+        {
+          if(valid_test_descs[v])
+          {
+            ++num_valid_test_descs;
+          }
+        }
+
 
         std::vector<cv::DMatch> matches;
         extractor.matchDescriptors(test_descs,
@@ -449,6 +467,9 @@ namespace lucid
                                    valid_reference_descs,
                                    &matches);
 
+        std::cout << "num_valid_ref_descs = " << num_valid_ref_descs << std::endl;
+        std::cout << "num_valid_test_descs = " << num_valid_test_descs << std::endl;
+        std::cout << "desc dimension = " << test_descs.cols << std::endl;
         std::cout << "matches.size() = " << matches.size() << std::endl;
         std::cout << "num_features = " << num_features << std::endl;
 
@@ -573,6 +594,11 @@ int main(int argc, char *argv[])
 
         switch(detector[0])
         {
+        case 'o':
+        case 'O':
+          std::cout << "Using ORB Features" << std::endl;
+          feature_detector = new lucid::OrbFeatureDetector();
+          break;
         case 't':
         case 'T':
           std::cout << "Using SIFT Features" << std::endl;
@@ -683,8 +709,11 @@ int main(int argc, char *argv[])
     }
   }
 
-  lucid::ELucidDescriptorExtractor elucid_extractor(true);
-  extractors.push_back(&elucid_extractor);                     
+  lucid::ELucidDescriptorExtractor elucid_extractor1(true);
+  extractors.push_back(&elucid_extractor1);                     
+
+  lucid::ELucidDescriptorExtractor elucid_extractor2(false);
+  extractors.push_back(&elucid_extractor2);                     
 
   lucid::ELucidBinaryDescriptorExtractor elucid_binary_extractor1(false);
   extractors.push_back(&elucid_binary_extractor1);                     
@@ -692,8 +721,8 @@ int main(int argc, char *argv[])
   lucid::ELucidBinaryDescriptorExtractor elucid_binary_extractor2(true);
   extractors.push_back(&elucid_binary_extractor2);                     
 
-  // lucid::LucidDescriptorExtractor lucid_extractor(lucid_window_size, 5);
-  // extractors.push_back(&lucid_extractor);                     
+  lucid::LucidDescriptorExtractor lucid_extractor(lucid_window_size, 5);
+  extractors.push_back(&lucid_extractor);                     
 
   lucid::BriefDescriptorExtractor brief_extractor;
   extractors.push_back(&brief_extractor);
@@ -714,24 +743,24 @@ int main(int argc, char *argv[])
   extractors.push_back(&sift_extractor);                     
 
   std::vector<std::vector<float> > recognition_rates;
-  // lucid::ExperimentDriver::symmetricMatchingExperiment(percent_non_matching,
-  //                                                      num_features,
-  //                                                      reference_image,
-  //                                                      images,
-  //                                                      homographies,
-  //                                                      *feature_detector,
-  //                                                      extractors,
-  //                                                      &recognition_rates);             
-
-  lucid::ExperimentDriver::detectionMatchingExperiment(num_features,
-                                                       radius,
+  lucid::ExperimentDriver::symmetricMatchingExperiment(percent_non_matching,
+                                                       num_features,
                                                        reference_image,
                                                        images,
                                                        homographies,
                                                        *feature_detector,
                                                        extractors,
-                                                       &recognition_rates,
-                                                       base_file_name);
+                                                       &recognition_rates);             
+
+  // lucid::ExperimentDriver::detectionMatchingExperiment(num_features,
+  //                                                      radius,
+  //                                                      reference_image,
+  //                                                      images,
+  //                                                      homographies,
+  //                                                      *feature_detector,
+  //                                                      extractors,
+  //                                                      &recognition_rates,
+  //                                                      base_file_name);
 
   // Display recognition rates for spreadsheet.
   for(int j = 0; j < images.size(); ++j)

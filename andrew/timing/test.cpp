@@ -202,9 +202,186 @@ string hammingNoSSE(const cv::Mat& test_descriptors,
   return "Hamming No SSE";
 }
 
+string hammingBranchOutSSEMatch(const cv::Mat& test_descriptors,
+                       const cv::Mat& train_descriptors,
+                       std::vector<cv::DMatch> *matches)
+{
+  register __oword xmm0;
+  register __oword xmm1;
+  register __oword xmm2;
+  register __oword xmm3;
+ 
+  int desc_width = test_descriptors.cols;
+  matches->reserve(test_descriptors.cols * train_descriptors.cols);
+
+  for(int i = 0; i < test_descriptors.rows; ++i)
+  {
+    const __m128i *test_desc = test_descriptors.ptr<__m128i>(i);
+    for(int j = 0; j < train_descriptors.rows; ++j)
+    {
+      const __m128i *train_desc = train_descriptors.ptr<__m128i>(j);
+      unsigned long int cur_dist = 0;
+
+
+      // Load descriptor elements for comparison.
+      xmm0.m128i = _mm_load_si128(&(test_desc[0]));
+      xmm1.m128i = _mm_load_si128(&(train_desc[0]));
+        
+      // Find exor
+      xmm0.m128i = _mm_xor_si128(xmm0.m128i, xmm1.m128i);
+              
+      // Sum upper and lower halfs 
+      cur_dist += _mm_popcnt_u64(xmm0.m128i_u64[0]) +
+        _mm_popcnt_u64(xmm0.m128i_u64[1]);
+
+      if(cur_dist < 115)
+      {
+        // Only continue for the 90% of cases as claimed in FREAK.
+        for(int d = 1; d < desc_width / 16; ++d)
+        {
+          // Load descriptor elements for comparison.
+          xmm0.m128i = _mm_load_si128(&(test_desc[d]));
+          xmm1.m128i = _mm_load_si128(&(train_desc[d]));
+        
+          // Find exor
+          xmm0.m128i = _mm_xor_si128(xmm0.m128i, xmm1.m128i);
+              
+          // Sum upper and lower halfs 
+          cur_dist += _mm_popcnt_u64(xmm0.m128i_u64[0]) +
+            _mm_popcnt_u64(xmm0.m128i_u64[1]);
+        }
+      }
+
+      matches->push_back(cv::DMatch(i, j, cur_dist));
+    }
+  }
+  return "HammingBranchOut SSE";
+}
+
+
+string hammingBranchOutSSEMatchNoPopcnt(const cv::Mat& test_descriptors,
+                               const cv::Mat& train_descriptors,
+                               std::vector<cv::DMatch> *matches)
+{
+  register __oword xmm0;
+  register __oword xmm1;
+  register __oword xmm2;
+  register __oword xmm3;
+
+  int desc_width = test_descriptors.cols;
+  matches->reserve(test_descriptors.cols * train_descriptors.cols);
+
+  for(int i = 0; i < test_descriptors.rows; ++i)
+  {
+    const __m128i *test_desc = test_descriptors.ptr<__m128i>(i);
+    for(int j = 0; j < train_descriptors.rows; ++j)
+    {
+      const __m128i *train_desc = train_descriptors.ptr<__m128i>(j);
+      unsigned long int cur_dist = 0;
+
+      // Load descriptor elements for comparison.
+      xmm0.m128i = _mm_load_si128(&(test_desc[0]));
+      xmm1.m128i = _mm_load_si128(&(train_desc[0]));
+        
+      // Find exor
+      xmm0.m128i = _mm_xor_si128(xmm0.m128i, xmm1.m128i);
+
+      // Use Lookup table to find popcount
+      for(int b = 0; b < 16; ++b)
+      {
+        cur_dist += lut[xmm0.m128i_u8[b]];
+      }
+
+      if(cur_dist < 115)
+      {
+        // Only continue for the 90% of cases as claimed in FREAK.
+        for(int d = 1; d < desc_width / 16; ++d)
+        {
+          // Load descriptor elements for comparison.
+          xmm0.m128i = _mm_load_si128(&(test_desc[d]));
+          xmm1.m128i = _mm_load_si128(&(train_desc[d]));
+        
+          // Find exor
+          xmm0.m128i = _mm_xor_si128(xmm0.m128i, xmm1.m128i);
+
+          // Use Lookup table to find popcount
+          for(int b = 0; b < 16; ++b)
+          {
+            cur_dist += lut[xmm0.m128i_u8[b]];
+          }
+        }
+      }
+
+      matches->push_back(cv::DMatch(i, j, cur_dist));
+    }
+  }
+  return "Hamming Branch Out SSE No POPCNT";
+}
+
+string hammingBranchOutNoSSE(const cv::Mat& test_descriptors,
+                    const cv::Mat& train_descriptors,
+                    std::vector<cv::DMatch> *matches)
+{
+  int desc_width = test_descriptors.cols;
+  matches->reserve(test_descriptors.cols * train_descriptors.cols);
+
+  for(int i = 0; i < test_descriptors.rows; ++i)
+  {
+    const uchar *test_desc = test_descriptors.ptr<uchar>(i);
+    for(int j = 0; j < train_descriptors.rows; ++j)
+    {
+      const uchar *train_desc = train_descriptors.ptr<uchar>(j);
+      unsigned long int cur_dist = 0;
+      for(int d = 0; d < 16; ++d)
+      {
+        // Get HammingBranchOut' distance from lookup table.
+        cur_dist += lut[test_desc[d] ^ train_desc[d]];
+      }
+
+      if(cur_dist < 115)
+      {
+        // Only continue for the 90% of cases as claimed in FREAK.
+        for(int d = 16; d < desc_width; ++d)
+        {
+          // Get Hamming distance from lookup table.
+          cur_dist += lut[test_desc[d] ^ train_desc[d]];
+        }
+      }
+
+      matches->push_back(cv::DMatch(i, j, cur_dist));
+    }
+  }
+  return "Hamming Branch Out No SSE";
+}
+
 string l2MatchNoSSE(const cv::Mat& test_descriptors,
                     const cv::Mat& train_descriptors,
                     std::vector<cv::DMatch> *matches)
+{
+  int desc_width = test_descriptors.cols;
+  matches->reserve(test_descriptors.cols * train_descriptors.cols);
+
+  for(int i = 0; i < test_descriptors.rows; ++i)
+  {
+    const float *test_desc = test_descriptors.ptr<float>(i);
+    for(int j = 0; j < train_descriptors.rows; ++j)
+    {
+      const float *train_desc = train_descriptors.ptr<float>(j);
+      unsigned long int cur_dist = 0;
+      for(int d = 0; d < desc_width; ++d)
+      {
+        float diff = test_desc[d] - train_desc[d];
+        cur_dist += diff*diff;
+      }
+      matches->push_back(cv::DMatch(i, j, cur_dist));
+    }
+  }
+  return "L2 No SSE";
+}
+
+string l2MatchSSE(const cv::Mat& test_descriptors,
+                  const cv::Mat& train_descriptors,
+                  std::vector<cv::DMatch> *matches)
 {
   int desc_width = test_descriptors.cols;
   matches->reserve(test_descriptors.cols * train_descriptors.cols);
@@ -335,7 +512,11 @@ int main(int argc, char *argv[])
   // Tie everything to one CPU so timings are accurate.
   cpu_set_t mask;
   CPU_ZERO(&mask);
-  CPU_SET(0, &mask);
+  // Set to random CPU per test
+  srand( time(NULL) );
+  uint cpu_num = 4;//rand() % 4;
+  std::cout << "Using CPU " << cpu_num << std::endl;
+  CPU_SET(cpu_num, &mask);
   assert(sched_setaffinity(0, sizeof(mask),&mask) != -1);
 
   // Set values for Hamming LUT.
@@ -354,79 +535,128 @@ int main(int argc, char *argv[])
   }
 
   const int num_descs = 1500;
-  const int num_trials = 5;
+  const int num_trials = 20;
   double average_run_time;
 
 ////////////////////////////////////////////////////////////////////////////////
 // L1
 ////////////////////////////////////////////////////////////////////////////////
-  timeMethod(num_trials,
-             num_descs,
-             96, // desc_width
-             false, // use unsigned bytes
-             &l1SSEMatch);
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            32, // desc_width
+  //            false, // use unsigned bytes
+  //            &l1SSEMatch);
 
-  timeMethod(num_trials,
-             num_descs,
-             96, // desc_width
-             false, // use unsigned bytes
-             &l1NoSSEMatch);
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            32, // desc_width
+  //            false, // use unsigned bytes
+  //            &l1NoSSEMatch);
+
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            64, // desc_width
+  //            false, // use unsigned bytes
+  //            &l1SSEMatch);
+
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            64, // desc_width
+  //            false, // use unsigned bytes
+  //            &l1NoSSEMatch);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Hamming
 ////////////////////////////////////////////////////////////////////////////////
 
-  timeMethod(num_trials,
-             num_descs,
-             32, // desc_width
-             false, // use unsigned bytes
-             &hammingSSEMatch);
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            16, // desc_width
+  //            false, // use unsigned bytes
+  //            &hammingSSEMatch);
 
-  timeMethod(num_trials,
-             num_descs,
-             32, // desc_width
-             false, // use unsigned bytes
-             &hammingSSEMatchNoPopcnt);
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            16, // desc_width
+  //            false, // use unsigned bytes
+  //            &hammingSSEMatchNoPopcnt);
 
-  timeMethod(num_trials,
-             num_descs,
-             32, // desc_width
-             false, // use unsigned bytes
-             &hammingNoSSE);
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            16, // desc_width
+  //            false, // use unsigned bytes
+  //            &hammingNoSSE);
+
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            32, // desc_width
+  //            false, // use unsigned bytes
+  //            &hammingSSEMatch);
+
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            32, // desc_width
+  //            false, // use unsigned bytes
+  //            &hammingSSEMatchNoPopcnt);
+
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            32, // desc_width
+  //            false, // use unsigned bytes
+  //            &hammingNoSSE);
+
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            64, // desc_width
+  //            false, // use unsigned bytes
+  //            &hammingSSEMatch);
+
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            64, // desc_width
+  //            false, // use unsigned bytes
+  //            &hammingSSEMatchNoPopcnt);
+
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            64, // desc_width
+  //            false, // use unsigned bytes
+  //            &hammingNoSSE);
 
   timeMethod(num_trials,
              num_descs,
              64, // desc_width
              false, // use unsigned bytes
-             &hammingSSEMatch);
+             &hammingBranchOutSSEMatch);
 
   timeMethod(num_trials,
              num_descs,
              64, // desc_width
              false, // use unsigned bytes
-             &hammingSSEMatchNoPopcnt);
+             &hammingBranchOutSSEMatchNoPopcnt);
 
   timeMethod(num_trials,
              num_descs,
              64, // desc_width
              false, // use unsigned bytes
-             &hammingNoSSE);
+             &hammingBranchOutNoSSE);
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // L2
 ////////////////////////////////////////////////////////////////////////////////
 
-  timeMethod(num_trials,
-             num_descs,
-             64, // desc_width
-             true, // use floats
-             &l2MatchNoSSE);
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            64, // desc_width
+  //            true, // use floats
+  //            &l2MatchNoSSE);
 
-  timeMethod(num_trials,
-             num_descs,
-             128, // desc_width
-             true, // use floats
-             &l2MatchNoSSE);
+  // timeMethod(num_trials,
+  //            num_descs,
+  //            128, // desc_width
+  //            true, // use floats
+  //            &l2MatchNoSSE);
 
 
   return 0;

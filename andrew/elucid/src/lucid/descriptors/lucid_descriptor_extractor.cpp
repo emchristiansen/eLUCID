@@ -65,13 +65,6 @@ namespace lucid
                           valid_descriptors,
                           &patches);
 
-    std::clock_t stop = std::clock();
-    std::cout << "Time to get image patches "
-              << (1000.0*(stop - start)) / CLOCKS_PER_SEC 
-              << "ms"
-              << std::endl;
-
-    start = std::clock();
     int desc_width = patches[0].cols * patches[0].rows * patches[0].channels();
     cv::Mat descs;
     // if(desc_width < 2<<8) 
@@ -110,7 +103,7 @@ namespace lucid
         }
       }
 //    }
-      stop = std::clock();
+      clock_t stop = std::clock();
       std::cout << "Time to compute LUCID descriptors "
                 << (1000.0*(stop - start)) / CLOCKS_PER_SEC 
                 << "ms"

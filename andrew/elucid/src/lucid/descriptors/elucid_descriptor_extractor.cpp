@@ -29,7 +29,9 @@ namespace lucid
 ////////////////////////////////////////////////////////////////////////////////
 
   ELucidDescriptorExtractor::ELucidDescriptorExtractor(bool normalize_rotation)
-    : DescriptorExtractor("eLUCID Rank Vector"),
+    : DescriptorExtractor(normalize_rotation ?
+                          "eLUCID-Rank-Vector" :
+                          "eLUCID-Rank-Vector-No-Rot"),
       _normalize_rotation(normalize_rotation)
   {
     
@@ -58,7 +60,7 @@ namespace lucid
              blurred_image,
              cv::Size(_blur_radius, _blur_radius));
 
-    const int patch_size = 45;
+    // TODO: Make this always grayscale
     const int num_channels = image.channels();
     
     uchar pixels[num_samples];
@@ -120,12 +122,15 @@ namespace lucid
 
           // Number of times to rotate outer most pattern
           uint turns = static_cast<uint>(round(key_points[k].angle / base_rotation_angle));
-        
-          // Rotate pattern elements
-          for(int r = 1; r <= turns; ++r)
-          {
-            for(int p = 0; p < num_polygons; ++p)
-            {
+                
+//        std::cout << "angle = " << key_points[k].angle << std::endl;
+//         std::cout << "octave = " << key_points[k].octave << std::endl;
+
+           // Rotate pattern elements
+           for(int r = 1; r <= turns; ++r)
+           {
+             for(int p = 0; p < num_polygons; ++p)
+             {
               if(!(r % rotation_ratios[p]))
               {
                 // TODO: Use lookup table with precomputed sigmas
@@ -243,6 +248,8 @@ namespace lucid
     register __oword xmm2;
     register __oword xmm3;
 
+    uint weights[4] = {1,1,1,1};
+
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
       if(valid_test_descriptors[i])
@@ -268,7 +275,7 @@ namespace lucid
               xmm0.m128i = _mm_sad_epu8(xmm0.m128i, xmm1.m128i);
               
               // Sum upper and lower halfs 
-              cur_dist += xmm0.m128i_u64[0] + xmm0.m128i_u64[1];
+              cur_dist += weights[k]*(xmm0.m128i_u64[0] + xmm0.m128i_u64[1]);
             }
 
             if(cur_dist < best_match_distance)
