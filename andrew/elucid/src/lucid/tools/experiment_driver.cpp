@@ -129,7 +129,8 @@ namespace lucid
     cv::warpPerspective(test_padded,
 			test_rotated,
 			padded_transform,
-			cv::Size(test_padded.cols, test_padded.rows));
+			cv::Size(test_padded.cols, test_padded.rows),
+			cv::INTER_CUBIC);
 
     cv::imwrite("test_image.png", test_image);
     cv::imwrite("test_padded.png", test_padded);
