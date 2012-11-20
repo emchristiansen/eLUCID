@@ -9,21 +9,6 @@
 
 #include <iostream>
 
-// For pop count.
-#include <nmmintrin.h>
-#include <inttypes.h>
-
-// For equality operator.
-#include <emmintrin.h>
-
-
-union __oword_t {
-  __m128i m128i;
-  uint64_t m128i_u64[2];
-};
-
-typedef union __oword_t __oword;
-
 namespace lucid
 {
 ////////////////////////////////////////////////////////////////////////////////
@@ -231,36 +216,18 @@ namespace lucid
     std::clock_t start = clock();
     int desc_width = test_descriptors.cols;
 
-    register __oword xmm0;
-    register __oword xmm1;
-    register __oword xmm2;
-    register __oword xmm3;
-
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
       if(valid_test_descriptors[i])
       {
-        const __m128i *test_desc = test_descriptors.ptr<__m128i>(i);
+        const uchar *test_desc = test_descriptors.ptr<uchar>(i);
         std::vector<cv::DMatch> cur_matches;
         for(int j = 0; j < train_descriptors.rows; ++j)
         {
           if(valid_train_descriptors[j])
           {
-            const __m128i *train_desc = train_descriptors.ptr<__m128i>(j);
-            unsigned long int cur_dist = 0;
-            for(int d = 0; d < desc_width / 16; ++d)
-            {
-              // Load descriptor elements for comparison.
-              xmm0.m128i = _mm_load_si128(&(test_desc[d]));
-              xmm1.m128i = _mm_load_si128(&(train_desc[d]));
-            
-              // Find exor
-              xmm0.m128i = _mm_xor_si128(xmm0.m128i, xmm1.m128i);
-              
-              // Sum upper and lower halfs 
-              cur_dist += _mm_popcnt_u64(xmm0.m128i_u64[0]) +
-                _mm_popcnt_u64(xmm0.m128i_u64[1]);
-            }
+            const uchar *train_desc = train_descriptors.ptr<uchar>(j);
+            unsigned long int cur_dist = cv::normHamming(test_desc, train_desc, desc_width);
             cur_matches.push_back(cv::DMatch(i, j, cur_dist));
           }
         }
@@ -306,37 +273,19 @@ namespace lucid
     std::clock_t start = clock();
     int desc_width = test_descriptors.cols;
 
-    register __oword xmm0;
-    register __oword xmm1;
-    register __oword xmm2;
-    register __oword xmm3;
-
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
       if(valid_test_descriptors[i])
       {
-        const __m128i *test_desc = test_descriptors.ptr<__m128i>(i);
+        const uchar *test_desc = test_descriptors.ptr<uchar>(i);
         int best_match_idx = -1;
         uint best_match_distance = ~0;
         for(int j = 0; j < train_descriptors.rows; ++j)
         {
           if(valid_train_descriptors[j])
           {
-            const __m128i *train_desc = train_descriptors.ptr<__m128i>(j);
-            unsigned long int cur_dist = 0;
-            for(int k = 0; k < desc_width / 16; ++k)
-            {
-              // Load descriptor elements for comparison.
-              xmm0.m128i = _mm_load_si128(&(test_desc[k]));
-              xmm1.m128i = _mm_load_si128(&(train_desc[k]));
-            
-              // Find exor
-              xmm0.m128i = _mm_xor_si128(xmm0.m128i, xmm1.m128i);
-              
-              // Sum upper and lower halfs 
-              cur_dist += _mm_popcnt_u64(xmm0.m128i_u64[0]) +
-                _mm_popcnt_u64(xmm0.m128i_u64[1]);
-            }
+            const uchar *train_desc = train_descriptors.ptr<uchar>(j);
+            unsigned long int cur_dist = cv::normHamming(test_desc, train_desc, desc_width);
 
             if(cur_dist < best_match_distance)
             {

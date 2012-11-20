@@ -9,6 +9,7 @@
 #include <iostream>
 
 // For pop count.
+#if not CV_NEON
 #include <nmmintrin.h>
 #include <inttypes.h>
 
@@ -22,7 +23,7 @@ union __oword_t {
 };
 
 typedef union __oword_t __oword;
-
+#endif
 namespace lucid
 {
 ////////////////////////////////////////////////////////////////////////////////
@@ -121,7 +122,7 @@ namespace lucid
           uchar *cur_desc = descs.ptr<uchar>(k);
 
           // Number of times to rotate outer most pattern
-          uint turns = static_cast<uint>(round(key_points[k].angle / base_rotation_angle));
+          uint turns = static_cast<uint>((360-round(key_points[k].angle) / base_rotation_angle));
                 
 //        std::cout << "angle = " << key_points[k].angle << std::endl;
 //         std::cout << "octave = " << key_points[k].octave << std::endl;
@@ -170,6 +171,38 @@ namespace lucid
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+size_t L1Norm(const uchar *a, const uchar *b, size_t desc_width) {
+	size_t cur_dist = 0;
+#if CV_NEON
+	for(size_t i = 0; i < desc_width; ++i)
+	    if (a[i] > b[i])
+	        cur_dist += a[i]-b[i];
+	    else
+	        cur_dist += b[i]-a[i];
+#else
+	register __oword xmm0;
+	register __oword xmm1;
+	register __oword xmm2;
+	register __oword xmm3;
+
+	const __m128i * test_desc = reinterpret_cast<__m128i *>(a);
+	const __m128i * train_desc = reinterpret_cast<__m128i *>(b);
+
+	for (int d = 0; d < desc_width / 16; ++d) {
+		// Load descriptor elements for comparison.
+		xmm0.m128i = _mm_load_si128(&(test_desc[d]));
+		xmm1.m128i = _mm_load_si128(&(train_desc[d]));
+
+		// Find difference
+		xmm0.m128i = _mm_sad_epu8(xmm0.m128i, xmm1.m128i);
+
+		// Sum upper and lower halfs
+		cur_dist += xmm0.m128i_u64[0] + xmm0.m128i_u64[1];
+	}
+#endif
+	return cur_dist;
+}
+
   void ELucidDescriptorExtractor::knnMatchDescriptors(
     const int k,
     const cv::Mat& test_descriptors,
@@ -181,35 +214,18 @@ namespace lucid
     std::clock_t start = clock();
     int desc_width = test_descriptors.cols;
 
-    register __oword xmm0;
-    register __oword xmm1;
-    register __oword xmm2;
-    register __oword xmm3;
-
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
       std::vector<cv::DMatch> cur_matches;
-      const __m128i *test_desc = test_descriptors.ptr<__m128i>(i);
+      const uchar *test_desc = test_descriptors.ptr<uchar>(i);
       for(int j = 0; j < train_descriptors.rows; ++j)
       {
         if(valid_test_descriptors[i] && valid_train_descriptors[j])
         {
           // TODO: Move this conditional outside of the loop ...
           // instead use a vector of pairs to compare. Should give a speedup
-          const __m128i *train_desc = train_descriptors.ptr<__m128i>(j);
-          unsigned int cur_dist = 0;
-          for(int d = 0; d < desc_width / 16; ++d)
-          {
-            // Load descriptor elements for comparison.
-            xmm0.m128i = _mm_load_si128(&(test_desc[d]));
-            xmm1.m128i = _mm_load_si128(&(train_desc[d]));
-            
-            // Find difference
-            xmm0.m128i = _mm_sad_epu8(xmm0.m128i, xmm1.m128i);
-              
-            // Sum upper and lower halfs 
-            cur_dist += xmm0.m128i_u64[0] + xmm0.m128i_u64[1];
-          }
+          const uchar *train_desc = train_descriptors.ptr<uchar>(j);
+          unsigned int cur_dist = L1Norm(test_desc, train_desc, desc_width);
           cur_matches.push_back(cv::DMatch(i, j, cur_dist));
         }
       }
@@ -243,18 +259,13 @@ namespace lucid
     std::clock_t start = clock();
     int desc_width = test_descriptors.cols;
 
-    register __oword xmm0;
-    register __oword xmm1;
-    register __oword xmm2;
-    register __oword xmm3;
-
     uint weights[4] = {1,1,1,1};
 
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
       if(valid_test_descriptors[i])
       {
-        const __m128i *test_desc = test_descriptors.ptr<__m128i>(i);
+        const uchar *test_desc = test_descriptors.ptr<uchar>(i);
         int best_match_idx = -1;
         uint best_match_distance = ~0;
         for(int j = 0; j < train_descriptors.rows; ++j)
@@ -263,20 +274,8 @@ namespace lucid
           {
             // TODO: Move this conditional outside of the loop ...
             // instead use a vector of pairs to compare. Should give a speedup
-            const __m128i *train_desc = train_descriptors.ptr<__m128i>(j);
-            unsigned long int cur_dist = 0;
-            for(int k = 0; k < desc_width / 16; ++k)
-            {
-              // Load descriptor elements for comparison.
-              xmm0.m128i = _mm_load_si128(&(test_desc[k]));
-              xmm1.m128i = _mm_load_si128(&(train_desc[k]));
-            
-              // Find difference
-              xmm0.m128i = _mm_sad_epu8(xmm0.m128i, xmm1.m128i);
-              
-              // Sum upper and lower halfs 
-              cur_dist += weights[k]*(xmm0.m128i_u64[0] + xmm0.m128i_u64[1]);
-            }
+            const uchar *train_desc = train_descriptors.ptr<uchar>(j);
+            unsigned int cur_dist = L1Norm(test_desc, train_desc, desc_width);
 
             if(cur_dist < best_match_distance)
             {
