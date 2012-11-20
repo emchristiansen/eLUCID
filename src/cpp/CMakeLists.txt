@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
-project(lucid)
+project(lucid_cpp)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 # deal with Octave
-find_package(Octave REQUIRED)
+find_package(Octave QUIET)
 include_directories(SYSTEM ${OCTAVE_INCLUDE_DIRS})
 
 # add compile instructions
