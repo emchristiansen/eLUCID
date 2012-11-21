@@ -7,6 +7,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include <iostream>
+#include <algorithm>
 
 // For pop count.
 #if not CV_NEON
@@ -68,30 +69,28 @@ namespace lucid
     uchar pixels[num_samples];
 
     int desc_width = num_samples * num_channels;
-    cv::Mat descs(key_points.size(),
-                  desc_width,
-                  CV_8UC1);
+    cv::Mat_<uchar> descs(key_points.size(), desc_width);
 
     valid_descriptors->resize(key_points.size());
 
     const ushort bin_width = 2; //FIXME: move this to class member
     for(int k = 0; k < key_points.size(); ++k)
     {
-      uchar *cur_desc = descs.ptr<uchar>(k);
       float x = key_points[k].pt.x;
       float y = key_points[k].pt.y;
 
-      (*valid_descriptors)[k] = ((x - patch_size / 2) > 0
-				&& (y - patch_size / 2) > 0 && (x + patch_size / 2) < image.cols
+      (*valid_descriptors)[k] = ((x - patch_size / 2) >= 0
+				&& (y - patch_size / 2) >= 0 && (x + patch_size / 2) < image.cols
 				&& (y + patch_size / 2) < image.rows);
       
       if((*valid_descriptors)[k])
       {
-        for (int p = 0; p < num_samples; ++p)
-				pixels[p] = blurred_image(
-						key_points[k].pt.y - patch_size / 2 + pattern[p][1],
-						key_points[k].pt.x - patch_size / 2 + pattern[p][0]);
+            for (int p = 0; p < num_samples; ++p)
+                pixels[p] = blurred_image(
+                        key_points[k].pt.y - patch_size / 2 + pattern[p][1],
+                        key_points[k].pt.x - patch_size / 2 + pattern[p][0]);
 
+        uchar *cur_desc = descs.ptr(k);
         Util::getRankVectors2(desc_width,
                               bin_width,
                               pixels,
@@ -101,46 +100,38 @@ namespace lucid
 
     if(_normalize_rotation)
     {
-      // Rotate descriptors based on orientation
+        // Rotate descriptors based on orientation
       std::clock_t start_2 = std::clock();
       
       for(int k = 0; k < key_points.size(); ++k)
       {
-     
         if((*valid_descriptors)[k])
         {
-          uchar *cur_desc = descs.ptr<uchar>(k);
+          uchar *desc = descs.ptr(k);
 
           // Number of times to rotate outer most pattern
-          uint turns = static_cast<uint>((360-round(key_points[k].angle) / base_rotation_angle));
-                
-//        std::cout << "angle = " << key_points[k].angle << std::endl;
-//         std::cout << "octave = " << key_points[k].octave << std::endl;
+                float turns = (360 - key_points[k].angle) / base_rotation_angle;
 
-           // Rotate pattern elements
-           for(int r = 1; r <= turns; ++r)
-           {
-             for(int p = 0; p < num_polygons; ++p)
-             {
-              if(!(r % rotation_ratios[p]))
-              {
-                // TODO: Use lookup table with precomputed sigmas
-                // Also try to use bit-shifting instead
-                int start_idx = polygon_start_idxs[p];
-                int end_idx = start_idx + polygon_sizes[p] - 1;
-                uchar last_value = cur_desc[start_idx];
-                cur_desc[start_idx] = cur_desc[end_idx];
-                for(int s = start_idx+1; s <= end_idx; ++s)
-                {
-                  uchar temp = cur_desc[s];
-                  cur_desc[s] = last_value;
-                  last_value = temp;
+                // Rotate pattern elements
+                for (int p = 0; p < num_polygons; ++p) {
+                    unsigned short r = (unsigned int) (round(
+                            turns / rotation_ratios[p])) % polygon_sizes[p];
+                    if (r) {
+                        uchar * first = desc + polygon_start_idxs[p];
+                        uchar * last = desc + polygon_start_idxs[p]
+                                + polygon_sizes[p];
+                        uchar * middle = last - r;
+                        uchar * next = middle;
+                        while (first != next) {
+                            std::swap(*first++, *next++);
+                            if (next == last)
+                                next = middle;
+                            else if (first == middle)
+                                middle = next;
+                        }
+                    }
                 }
-                cur_desc[start_idx] = last_value;
-              }
             }
-          }
-        }
       }
       std::clock_t stop_2 = std::clock();
       std::cout << "Time to normalize rotation eLUCID Rank Vector descriptors "
