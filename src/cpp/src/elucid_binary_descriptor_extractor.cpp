@@ -194,18 +194,20 @@ namespace lucid
         }
       }
 
-      for(int k = 0; k < key_points.size(); ++k)
-      {
-
-        if((*valid_descriptors)[k])
+      if (_normalize_rotation) {
+        for(int k = 0; k < key_points.size(); ++k)
         {
-          uchar *cur_desc = descs.ptr<uchar>(k);
 
-          // Number of times to rotate outer most pattern
-          float turns = (360 - key_points[k].angle) / base_rotation_angle;
+          if((*valid_descriptors)[k])
+          {
+            uchar *cur_desc = descs.ptr<uchar>(k);
 
-           // Rotate pattern elements
-           Util::rotateDescriptor(turns, cur_desc);
+            // Number of times to rotate outer most pattern
+            float turns = (360 - key_points[k].angle) / base_rotation_angle;
+
+             // Rotate pattern elements
+             Util::rotateDescriptor(turns, cur_desc);
+          }
         }
       }
 
