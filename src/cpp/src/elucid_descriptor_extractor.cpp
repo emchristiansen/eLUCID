@@ -52,26 +52,6 @@ namespace lucid
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-  void rotateDescriptor(float turns, uchar* desc) {
-    for (int p = 0; p < num_polygons; ++p) {
-        unsigned short r = (unsigned int) (round(turns / rotation_ratios[p]))
-                % polygon_sizes[p];
-        if (r) {
-            uchar * first = desc + polygon_start_idxs[p];
-            uchar * last = desc + polygon_start_idxs[p] + polygon_sizes[p];
-            uchar * middle = last - r;
-            uchar * next = middle;
-            while (first != next) {
-                std::swap(*first++, *next++);
-                if (next == last)
-                    next = middle;
-                else if (first == middle)
-                    middle = next;
-            }
-        }
-    }
-}
-
   void ELucidDescriptorExtractor::computeDescriptors(
     const cv::Mat& image,
     const std::vector<cv::KeyPoint>& key_points,
@@ -140,7 +120,7 @@ namespace lucid
           float turns = (360 - key_points[k].angle) / base_rotation_angle;
 
            // Rotate pattern elements
-           rotateDescriptor(turns, cur_desc);
+           Util::rotateDescriptor(turns, cur_desc);
         }
       }
       std::clock_t stop_2 = std::clock();
@@ -219,7 +199,7 @@ namespace lucid
                 desc_width);
 
       minDistance = thisDistance < minDistance ? thisDistance : minDistance;
-      rotateDescriptor(1, rightDescriptor);
+      Util::rotateDescriptor(1, rightDescriptor);
     }
     return minDistance;
   }

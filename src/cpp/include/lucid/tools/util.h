@@ -15,6 +15,8 @@ namespace lucid
   class Util
   {
   public:
+    static void rotateDescriptor(float turns, uchar* desc);
+
     /**
      * Extracts square image patches centered about the subpixel location
      * of each key point. If any key points are too close to the image 

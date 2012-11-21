@@ -14,7 +14,7 @@ namespace lucid
     /**
      * Creates a binary valued elucid  descriptor extractor.
      */
-    ELucidBinaryDescriptorExtractor(bool useWideDesc);
+    ELucidBinaryDescriptorExtractor(bool useWideDesc, bool normalize_rotation);
     ~ELucidBinaryDescriptorExtractor();
 
     /**
@@ -65,6 +65,7 @@ namespace lucid
   private:
 //    const ushort _bin_width = 16;
     bool _useWideDesc;
+    bool _normalize_rotation;
 //    uchar lut[_bin_width];
   };
 

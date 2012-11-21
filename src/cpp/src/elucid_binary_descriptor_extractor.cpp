@@ -15,9 +15,9 @@ namespace lucid
 ////////////////////////////////////////////////////////////////////////////////
 
   ELucidBinaryDescriptorExtractor::ELucidBinaryDescriptorExtractor
-  (bool useWideDesc)
+  (bool useWideDesc, bool normalize_rotation)
     : DescriptorExtractor(useWideDesc ? "eLUCID 512 bit" : "eLUCID 256 bit"),
-      _useWideDesc(useWideDesc)
+      _useWideDesc(useWideDesc), _normalize_rotation(normalize_rotation)
   {
     
   }
@@ -193,6 +193,22 @@ namespace lucid
 
         }
       }
+
+      for(int k = 0; k < key_points.size(); ++k)
+      {
+
+        if((*valid_descriptors)[k])
+        {
+          uchar *cur_desc = descs.ptr<uchar>(k);
+
+          // Number of times to rotate outer most pattern
+          float turns = (360 - key_points[k].angle) / base_rotation_angle;
+
+           // Rotate pattern elements
+           Util::rotateDescriptor(turns, cur_desc);
+        }
+      }
+
         std::clock_t stop = std::clock();
         std::cout << "Time to compute eLUCID 512 bit descriptors "
                   << (1000.0*(stop - start)) / CLOCKS_PER_SEC 

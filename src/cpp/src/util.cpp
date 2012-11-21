@@ -13,6 +13,29 @@ namespace lucid
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+void Util::rotateDescriptor(float turns, uchar* desc) {
+  for (int p = 0; p < num_polygons; ++p) {
+      unsigned short r = (unsigned int) (round(turns / rotation_ratios[p]))
+              % polygon_sizes[p];
+      if (r) {
+          uchar * first = desc + polygon_start_idxs[p];
+          uchar * last = desc + polygon_start_idxs[p] + polygon_sizes[p];
+          uchar * middle = last - r;
+          uchar * next = middle;
+          while (first != next) {
+              std::swap(*first++, *next++);
+              if (next == last)
+                  next = middle;
+              else if (first == middle)
+                  middle = next;
+          }
+      }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
   void Util::getImagePatches(int patch_edge_length,
                              const cv::Mat& image,
                              const std::vector<cv::KeyPoint>& key_points,
