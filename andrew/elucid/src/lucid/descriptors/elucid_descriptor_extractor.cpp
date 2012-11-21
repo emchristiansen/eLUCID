@@ -55,7 +55,8 @@ namespace lucid
     cv::Mat *descriptors) const
   {    
     std::clock_t start = std::clock();
-    cv::Mat blurred_image;
+    CV_Assert(image.channels() == 1);
+    cv::Mat_<uchar> blurred_image;
     int _blur_radius = 5; //FIXME: move this to class member
     cv::blur(image,
              blurred_image,
@@ -71,7 +72,7 @@ namespace lucid
                   desc_width,
                   CV_8UC1);
 
-    valid_descriptors->reserve(key_points.size());
+    valid_descriptors->resize(key_points.size());
 
     const ushort bin_width = 2; //FIXME: move this to class member
     for(int k = 0; k < key_points.size(); ++k)
@@ -80,27 +81,16 @@ namespace lucid
       float x = key_points[k].pt.x;
       float y = key_points[k].pt.y;
 
-      valid_descriptors->push_back(
-        (x - patch_size/2) > 0 &&
-        (y - patch_size/2) > 0 &&
-        (x + patch_size/2) < image.cols &&
-        (y + patch_size/2) < image.rows);
+      (*valid_descriptors)[k] = ((x - patch_size / 2) > 0
+				&& (y - patch_size / 2) > 0 && (x + patch_size / 2) < image.cols
+				&& (y + patch_size / 2) < image.rows);
       
       if((*valid_descriptors)[k])
       {
-        // TODO: Replace this by directly accessing pattern pixels
-        cv::Mat patch;
-        getRectSubPix(blurred_image,
-                      cv::Size(patch_size, patch_size),
-                      key_points[k].pt,
-                      patch);
-      
-        uchar* patch_ptr = patch.data;
-        int next_idx = 0;
-        for(int p = 0; p < num_samples; ++p)
-        {
-          pixels[p] = patch_ptr[pattern[p][1] * patch_size + pattern[p][0]];
-        }
+        for (int p = 0; p < num_samples; ++p)
+				pixels[p] = blurred_image(
+						key_points[k].pt.y - patch_size / 2 + pattern[p][1],
+						key_points[k].pt.x - patch_size / 2 + pattern[p][0]);
 
         Util::getRankVectors2(desc_width,
                               bin_width,
