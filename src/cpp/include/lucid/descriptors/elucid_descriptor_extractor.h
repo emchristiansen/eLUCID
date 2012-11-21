@@ -14,7 +14,9 @@ namespace lucid
     /**
      * Creates an integer valued eLUCID  descriptor extractor.
      */
-    ELucidDescriptorExtractor(bool normalizeRotation = false);
+    ELucidDescriptorExtractor(
+        bool normalizeRotation = false,
+        bool tryAllRotations = false);
     ~ELucidDescriptorExtractor();
 
     /**
@@ -58,6 +60,7 @@ namespace lucid
 
   private:
     bool _normalize_rotation;
+    bool _tryAllRotations;
   };
 
 } // namespace lucid

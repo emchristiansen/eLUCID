@@ -5,6 +5,7 @@
 #include "lucid/tools/util.h"
 #include "lucid/tools/timer.h"
 #include <opencv2/imgproc/imgproc.hpp>
+#include <climits>
 
 #include <iostream>
 
@@ -28,11 +29,13 @@ namespace lucid
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-  ELucidDescriptorExtractor::ELucidDescriptorExtractor(bool normalize_rotation)
+  ELucidDescriptorExtractor::ELucidDescriptorExtractor(
+      bool normalize_rotation, bool tryAllRotations)
     : DescriptorExtractor(normalize_rotation ?
                           "eLUCID-Rank-Vector" :
                           "eLUCID-Rank-Vector-No-Rot"),
-      _normalize_rotation(normalize_rotation)
+      _normalize_rotation(normalize_rotation),
+      _tryAllRotations(tryAllRotations)
   {
     
   }
@@ -46,6 +49,31 @@ namespace lucid
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+
+  void rotateDescriptor(int turns, uchar* cur_desc) {
+    for(int r = 1; r <= turns; ++r)
+    {
+      for(int p = 0; p < num_polygons; ++p)
+      {
+       if(!(r % rotation_ratios[p]))
+       {
+         // TODO: Use lookup table with precomputed sigmas
+         // Also try to use bit-shifting instead
+         int start_idx = polygon_start_idxs[p];
+         int end_idx = start_idx + polygon_sizes[p] - 1;
+         uchar last_value = cur_desc[start_idx];
+         cur_desc[start_idx] = cur_desc[end_idx];
+         for(int s = start_idx+1; s <= end_idx; ++s)
+         {
+           uchar temp = cur_desc[s];
+           cur_desc[s] = last_value;
+           last_value = temp;
+         }
+         cur_desc[start_idx] = last_value;
+       }
+     }
+   }
+  }
 
   void ELucidDescriptorExtractor::computeDescriptors(
     const cv::Mat& image,
@@ -127,28 +155,7 @@ namespace lucid
 //         std::cout << "octave = " << key_points[k].octave << std::endl;
 
            // Rotate pattern elements
-           for(int r = 1; r <= turns; ++r)
-           {
-             for(int p = 0; p < num_polygons; ++p)
-             {
-              if(!(r % rotation_ratios[p]))
-              {
-                // TODO: Use lookup table with precomputed sigmas
-                // Also try to use bit-shifting instead
-                int start_idx = polygon_start_idxs[p];
-                int end_idx = start_idx + polygon_sizes[p] - 1;
-                uchar last_value = cur_desc[start_idx];
-                cur_desc[start_idx] = cur_desc[end_idx];
-                for(int s = start_idx+1; s <= end_idx; ++s)
-                {
-                  uchar temp = cur_desc[s];
-                  cur_desc[s] = last_value;
-                  last_value = temp;
-                }
-                cur_desc[start_idx] = last_value;
-              }
-            }
-          }
+           rotateDescriptor(turns, cur_desc);
         }
       }
       std::clock_t stop_2 = std::clock();
@@ -233,6 +240,55 @@ namespace lucid
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+  unsigned long int l0Distance(
+    int desc_width,
+    uint weights[4],
+    const uchar* leftDescriptor,
+    const uchar* rightDescriptor) {
+    register __oword xmm0;
+    register __oword xmm1;
+    register __oword xmm2;
+    register __oword xmm3;
+
+    const __m128i *leftPointer = reinterpret_cast<const __m128i*>(leftDescriptor);
+    // TODO: Move this conditional outside of the loop ...
+    // instead use a vector of pairs to compare. Should give a speedup
+    const __m128i *rightPointer = reinterpret_cast<const __m128i*>(rightDescriptor);
+    unsigned long int cur_dist = 0;
+    for(int k = 0; k < desc_width / 16; ++k)
+    {
+      // Load descriptor elements for comparison.
+      xmm0.m128i = _mm_load_si128(&(leftPointer[k]));
+      xmm1.m128i = _mm_load_si128(&(rightPointer[k]));
+
+      // Find difference
+      xmm0.m128i = _mm_sad_epu8(xmm0.m128i, xmm1.m128i);
+
+      // Sum upper and lower halfs
+      cur_dist += weights[k]*(xmm0.m128i_u64[0] + xmm0.m128i_u64[1]);
+    }
+    return cur_dist;
+  }
+
+  unsigned long int l0DistanceAllRotations(
+    int desc_width,
+    uint weights[4],
+    const uchar* leftDescriptor,
+    uchar* rightDescriptor) {
+    int minDistance = INT_MAX;
+    for (int trash = 0; trash < num_rotations; ++trash) {
+      int thisDistance = l0Distance(
+        desc_width,
+        weights,
+        leftDescriptor,
+        rightDescriptor);
+
+      minDistance = thisDistance < minDistance ? thisDistance : minDistance;
+      rotateDescriptor(1, rightDescriptor);
+    }
+    return minDistance;
+  }
+
   void ELucidDescriptorExtractor::matchDescriptors(
     const cv::Mat& test_descriptors,
     const cv::Mat& train_descriptors,
@@ -243,39 +299,34 @@ namespace lucid
     std::clock_t start = clock();
     int desc_width = test_descriptors.cols;
 
-    register __oword xmm0;
-    register __oword xmm1;
-    register __oword xmm2;
-    register __oword xmm3;
-
     uint weights[4] = {1,1,1,1};
 
+    std::vector<uchar> descriptorScratchSpace(desc_width);
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
       if(valid_test_descriptors[i])
       {
-        const __m128i *test_desc = test_descriptors.ptr<__m128i>(i);
         int best_match_idx = -1;
         uint best_match_distance = ~0;
         for(int j = 0; j < train_descriptors.rows; ++j)
         {
           if(valid_train_descriptors[j])
           {
-            // TODO: Move this conditional outside of the loop ...
-            // instead use a vector of pairs to compare. Should give a speedup
-            const __m128i *train_desc = train_descriptors.ptr<__m128i>(j);
             unsigned long int cur_dist = 0;
-            for(int k = 0; k < desc_width / 16; ++k)
-            {
-              // Load descriptor elements for comparison.
-              xmm0.m128i = _mm_load_si128(&(test_desc[k]));
-              xmm1.m128i = _mm_load_si128(&(train_desc[k]));
-            
-              // Find difference
-              xmm0.m128i = _mm_sad_epu8(xmm0.m128i, xmm1.m128i);
-              
-              // Sum upper and lower halfs 
-              cur_dist += weights[k]*(xmm0.m128i_u64[0] + xmm0.m128i_u64[1]);
+            if (_tryAllRotations) {
+              uchar* copyPtr = &descriptorScratchSpace[0];
+              memcpy(copyPtr, train_descriptors.ptr(j), desc_width);
+              cur_dist = l0DistanceAllRotations(
+                desc_width,
+                weights,
+                test_descriptors.ptr(i),
+                copyPtr);
+            } else {
+              cur_dist = l0Distance(
+                desc_width,
+                weights,
+                test_descriptors.ptr(i),
+                train_descriptors.ptr(j));
             }
 
             if(cur_dist < best_match_distance)

@@ -13,7 +13,8 @@ namespace lucid
   const unsigned int polygon_start_idxs[num_polygons] = { 0, 8, 16, 32};
   const unsigned int polygon_sizes[num_polygons] = { 8, 8, 16, 32};
   const unsigned int rotation_ratios[num_polygons] = { 4, 4, 2, 1};
-  const float base_rotation_angle = 360.0 / 32;
+  const unsigned int num_rotations = 32;
+  const float base_rotation_angle = 360.0 / num_rotations;
   const unsigned char pattern[num_samples][2] =
     {
       /* Polygon 1 */
