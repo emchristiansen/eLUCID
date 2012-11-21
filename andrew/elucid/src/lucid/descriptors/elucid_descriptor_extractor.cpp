@@ -171,38 +171,6 @@ namespace lucid
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-size_t L1Norm(const uchar *a, const uchar *b, size_t desc_width) {
-	size_t cur_dist = 0;
-#if CV_NEON
-	for(size_t i = 0; i < desc_width; ++i)
-	    if (a[i] > b[i])
-	        cur_dist += a[i]-b[i];
-	    else
-	        cur_dist += b[i]-a[i];
-#else
-	register __oword xmm0;
-	register __oword xmm1;
-	register __oword xmm2;
-	register __oword xmm3;
-
-	const __m128i * test_desc = reinterpret_cast<__m128i *>(a);
-	const __m128i * train_desc = reinterpret_cast<__m128i *>(b);
-
-	for (int d = 0; d < desc_width / 16; ++d) {
-		// Load descriptor elements for comparison.
-		xmm0.m128i = _mm_load_si128(&(test_desc[d]));
-		xmm1.m128i = _mm_load_si128(&(train_desc[d]));
-
-		// Find difference
-		xmm0.m128i = _mm_sad_epu8(xmm0.m128i, xmm1.m128i);
-
-		// Sum upper and lower halfs
-		cur_dist += xmm0.m128i_u64[0] + xmm0.m128i_u64[1];
-	}
-#endif
-	return cur_dist;
-}
-
   void ELucidDescriptorExtractor::knnMatchDescriptors(
     const int k,
     const cv::Mat& test_descriptors,
@@ -213,6 +181,9 @@ size_t L1Norm(const uchar *a, const uchar *b, size_t desc_width) {
   {
     std::clock_t start = clock();
     int desc_width = test_descriptors.cols;
+
+    matches->clear();
+    matches->reserve(test_descriptors.rows);
 
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
@@ -225,7 +196,7 @@ size_t L1Norm(const uchar *a, const uchar *b, size_t desc_width) {
           // TODO: Move this conditional outside of the loop ...
           // instead use a vector of pairs to compare. Should give a speedup
           const uchar *train_desc = train_descriptors.ptr<uchar>(j);
-          unsigned int cur_dist = L1Norm(test_desc, train_desc, desc_width);
+          unsigned int cur_dist = cv::normL1_(test_desc, train_desc, desc_width);
           cur_matches.push_back(cv::DMatch(i, j, cur_dist));
         }
       }
@@ -261,6 +232,8 @@ size_t L1Norm(const uchar *a, const uchar *b, size_t desc_width) {
 
     uint weights[4] = {1,1,1,1};
 
+    matches->clear();
+    matches->reserve(test_descriptors.rows);
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
       if(valid_test_descriptors[i])
@@ -275,7 +248,7 @@ size_t L1Norm(const uchar *a, const uchar *b, size_t desc_width) {
             // TODO: Move this conditional outside of the loop ...
             // instead use a vector of pairs to compare. Should give a speedup
             const uchar *train_desc = train_descriptors.ptr<uchar>(j);
-            unsigned int cur_dist = L1Norm(test_desc, train_desc, desc_width);
+            unsigned int cur_dist = cv::normL1_(test_desc, train_desc, desc_width);
 
             if(cur_dist < best_match_distance)
             {

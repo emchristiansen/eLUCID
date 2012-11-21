@@ -216,6 +216,8 @@ namespace lucid
     std::clock_t start = clock();
     int desc_width = test_descriptors.cols;
 
+    matches->clear();
+    matches->reserve(test_descriptors.rows);
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
       if(valid_test_descriptors[i])
@@ -273,6 +275,8 @@ namespace lucid
     std::clock_t start = clock();
     int desc_width = test_descriptors.cols;
 
+    matches->clear();
+    matches->reserve(test_descriptors.rows);
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
       if(valid_test_descriptors[i])
