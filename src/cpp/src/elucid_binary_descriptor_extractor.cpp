@@ -15,9 +15,9 @@ namespace lucid
 ////////////////////////////////////////////////////////////////////////////////
 
   ELucidBinaryDescriptorExtractor::ELucidBinaryDescriptorExtractor
-  (bool useWideDesc, bool normalize_rotation)
+  (bool useWideDesc, bool normalize_rotation, bool tryAllRotations)
     : DescriptorExtractor(useWideDesc ? "eLUCID 512 bit" : "eLUCID 256 bit"),
-      _useWideDesc(useWideDesc), _normalize_rotation(normalize_rotation)
+      _useWideDesc(useWideDesc), _normalize_rotation(normalize_rotation), _tryAllRotations(tryAllRotations)
   {
     
   }
@@ -281,6 +281,21 @@ namespace lucid
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+  unsigned long int normHammingAllRotations(
+    int desc_width,
+    const uchar* leftDescriptor,
+    uchar* rightDescriptor) {
+    int minDistance = INT_MAX;
+    for (int trash = 0; trash < num_rotations; ++trash) {
+      int thisDistance = cv::normHamming(leftDescriptor, rightDescriptor,
+                desc_width);
+
+      minDistance = thisDistance < minDistance ? thisDistance : minDistance;
+      Util::rotateDescriptor(1, rightDescriptor);
+    }
+    return minDistance;
+  }
+
   void ELucidBinaryDescriptorExtractor::matchDescriptors(
     const cv::Mat& test_descriptors,
     const cv::Mat& train_descriptors,
@@ -293,6 +308,7 @@ namespace lucid
 
     matches->clear();
     matches->reserve(test_descriptors.rows);
+    std::vector<uchar> descriptorScratchSpace(desc_width);
     for(int i = 0; i < test_descriptors.rows; ++i)
     {
       if(valid_test_descriptors[i])
@@ -305,7 +321,17 @@ namespace lucid
           if(valid_train_descriptors[j])
           {
             const uchar *train_desc = train_descriptors.ptr<uchar>(j);
-            unsigned long int cur_dist = cv::normHamming(test_desc, train_desc, desc_width);
+            unsigned long int cur_dist = 0;
+            if (_tryAllRotations) {
+              uchar* copyPtr = &descriptorScratchSpace[0];
+              memcpy(copyPtr, train_descriptors.ptr(j), desc_width);
+              cur_dist = normHammingAllRotations(
+                desc_width,
+                test_descriptors.ptr(i),
+                copyPtr);
+            } else {
+              cur_dist = cv::normHamming(test_desc, train_desc, desc_width);
+            }
 
             if(cur_dist < best_match_distance)
             {
