@@ -39,7 +39,7 @@ namespace lucid
     cv::Mat *descriptors) const
   {    
     std::clock_t start = std::clock();
-    cv::Mat blurred_image;
+    cv::Mat_<uchar> blurred_image;
     int _blur_radius = 5; //FIXME: move this to class member
     cv::blur(image,
              blurred_image,
@@ -91,20 +91,10 @@ namespace lucid
 
         if((*valid_descriptors)[k])
         {
-
-          // TODO: Replace this by directly accessing pattern pixels
-          cv::Mat patch;
-          getRectSubPix(blurred_image,
-                        cv::Size(patch_size, patch_size),
-                        key_points[k].pt,
-                        patch);
-        
-          uchar* patch_ptr = patch.data;
-
-          for(int p = 0; p < num_samples; ++p)
-          {
-            pixels[p] = patch_ptr[pattern[p][1] * patch_size + pattern[p][0]];
-          } 
+            for (int p = 0; p < num_samples; ++p)
+                  pixels[p] = blurred_image(
+                          key_points[k].pt.y - patch_size / 2 + pattern[p][1],
+                          key_points[k].pt.x - patch_size / 2 + pattern[p][0]);
 
           int bin_width = 16;
           uchar temp_desc[num_samples];
@@ -164,20 +154,10 @@ namespace lucid
 
         if((*valid_descriptors)[k])
         {
-
-          // TODO: Replace this by directly accessing pattern pixels
-          cv::Mat patch;
-          getRectSubPix(blurred_image,
-                        cv::Size(patch_size, patch_size),
-                        key_points[k].pt,
-                        patch);
-        
-          uchar* patch_ptr = patch.data;
-
-          for(int p = 0; p < num_samples; ++p)
-          {
-            pixels[p] = patch_ptr[pattern[p][1] * patch_size + pattern[p][0]];
-          } 
+            for (int p = 0; p < num_samples; ++p)
+                  pixels[p] = blurred_image(
+                          key_points[k].pt.y - patch_size / 2 + pattern[p][1],
+                          key_points[k].pt.x - patch_size / 2 + pattern[p][0]);
 
           int bin_width = 8;
           uchar temp_desc[num_samples];
