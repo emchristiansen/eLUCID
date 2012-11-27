@@ -1,0 +1,20 @@
+<package>
+  <name>lucid</name>
+  <version>0.1.0</version>
+  <description>Lucid descriptor and ecto bindings.</description>
+  <author>Andrew Ziegler</author>
+  <author>Eric Christiansen</author>
+  <author>Vincent Rabaud</author>
+  <maintainer email="vrabaud@willowgarage.com">Vincent Rabaud</maintainer>
+  <license>BSD</license>
+
+  <url>http://ecto.willowgarage.com</url>
+  <build_depend>catkin</build_depend>
+  <build_depend>boost</build_depend>
+  <build_depend>ecto</build_depend>
+  <build_depend>opencv2</build_depend>
+
+  <run_depend>boost</run_depend>
+  <run_depend>ecto</run_depend>
+  <run_depend>opencv2</run_depend>
+</package>
