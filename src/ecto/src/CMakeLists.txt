@@ -1,4 +1,4 @@
-ectomodule(lucid DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python2.7/dist-packages/
+ectomodule(ecto_lucid DESTINATION ./
                       INSTALL
                       interfaces.cpp
                       LUCID.cpp
@@ -8,10 +8,10 @@ ectomodule(lucid DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python2.7/dist-pa
 )
 
 find_package(OpenCV REQUIRED)
-link_ecto(lucid ${catkin_LIBRARIES}
+link_ecto(ecto_lucid ${catkin_LIBRARIES}
                 ${OpenCV_LIBRARIES}
                 lucid
 )
 
 #For Hamming distance
-set_target_properties(lucid_ectomodule PROPERTIES COMPILE_FLAGS "-msse4.2")
+set_target_properties(ecto_lucid_ectomodule PROPERTIES COMPILE_FLAGS "-msse4.2")
